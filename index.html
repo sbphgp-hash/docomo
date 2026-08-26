@@ -1,0 +1,1225 @@
+<!-- iPad最適化タグ -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="料金シミュ">
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+  /* 全体設定 */
+  html, body {
+    margin: 0; padding: 0; background-color: #f0f2f5;
+    font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Segoe UI", sans-serif;
+    color: #333; overflow-x: hidden;
+  }
+
+  /* 上部ナビゲーション */
+  .top-nav {
+    background: #ffffff; padding: 12px 24px;
+    display: flex; justify-content: space-between; align-items: center;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05); position: sticky; top: 0; z-index: 100;
+  }
+
+  .nav-buttons { display: flex; gap: 12px; align-items: center; }
+  .btn {
+    padding: 10px 16px; border-radius: 8px; font-size: 14px; font-weight: bold;
+    cursor: pointer; border: 1px solid #ddd; background: #fff; color: #555;
+    transition: all 0.2s ease; display: flex; align-items: center; gap: 6px;
+  }
+  .btn:hover:not(:disabled) { background: #f8f9fa; border-color: #ccc; }
+  .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+  .btn-primary { background: #cc0000; color: #fff; border: none; }
+  .btn-primary:hover:not(:disabled) { background: #aa0000; }
+  
+  /* タブ */
+  .tab-bar-container { padding: 24px 24px 0 24px; max-width: 1300px; margin: 0 auto; }
+  .tab-bar {
+    display: inline-flex; background: #e4e6eb; padding: 4px; border-radius: 12px; gap: 4px;
+    overflow-x: auto; max-width: 100%;
+  }
+  .tab-btn {
+    padding: 10px 24px; background: transparent; border: none;
+    border-radius: 8px; cursor: pointer; font-weight: bold; color: #666; font-size: 14px;
+    transition: all 0.2s ease; white-space: nowrap;
+  }
+  .tab-btn.active { background: #ffffff; color: #cc0000; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+  .tab-btn.active.fixed-tab { color: #118ab2; }
+
+  /* 2カラムレイアウト */
+  .view-container { display: none; padding: 24px; max-width: 1300px; margin: 0 auto; }
+  .view-active { display: block; }
+  .two-columns { display: flex; gap: 24px; align-items: flex-start; }
+  .col-left { flex: 2; display: flex; flex-direction: column; gap: 20px; }
+  .col-right { flex: 1; display: flex; flex-direction: column; gap: 20px; }
+
+  /* カードデザイン */
+  .section-card {
+    background: #ffffff; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+    border: 1px solid #eaedf1; overflow: hidden;
+  }
+  .section-header {
+    padding: 14px 20px; font-weight: 800; font-size: 15px; color: #333;
+    border-bottom: 1px solid #f0f2f5; background: #fafbfc;
+  }
+  .section-body { padding: 20px; }
+  .section-footer {
+    padding: 12px 20px; background: #fafbfc; border-top: 1px solid #f0f2f5;
+    text-align: right; font-weight: bold; font-size: 14px; color: #555;
+  }
+  .price-text { font-size: 18px; color: #333; }
+
+  /* 追従パネル */
+  .sticky-summary { position: sticky; top: 90px; border: 2px solid #cc0000; }
+  .btn-delete-line {
+    margin-top: 16px; padding: 10px; width: 100%; border-radius: 8px; border: 1px solid #ffccd5;
+    background: #fff0f5; color: #cc0000; font-weight: bold; cursor: pointer; transition: all 0.2s;
+  }
+  .btn-delete-line:hover { background: #ffe6ea; }
+
+  /* フォーム要素 */
+  .form-group { margin-bottom: 16px; }
+  .form-group:last-child { margin-bottom: 0; }
+  .form-label { display: block; font-size: 12px; color: #555; margin-bottom: 6px; font-weight: bold; }
+  select, input[type="number"] {
+    width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px;
+    font-size: 14px; box-sizing: border-box; background: #fdfdfd; transition: border 0.2s;
+  }
+  select:focus, input[type="number"]:focus { border-color: #cc0000; outline: none; }
+  .check-label {
+    display: flex; align-items: center; gap: 8px; font-size: 14px; margin-bottom: 12px;
+    cursor: pointer; padding: 8px 12px; border-radius: 8px; border: 1px solid #eee; transition: all 0.2s;
+  }
+  .check-label:hover { background: #f9f9f9; }
+  .check-label input { transform: scale(1.3); accent-color: #cc0000; }
+
+  /* 下部バー */
+  .bottom-bar {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px);
+    border-top: 1px solid #ddd; padding: 12px 32px;
+    display: flex; justify-content: space-between; align-items: center;
+    z-index: 100; box-shadow: 0 -4px 20px rgba(0,0,0,0.05);
+  }
+  .line-badges { display: flex; gap: 12px; flex-wrap: wrap; }
+  .line-badge {
+    background: #fff; border: 1px solid #ddd; padding: 8px 16px; border-radius: 20px;
+    font-size: 13px; font-weight: bold; color: #555; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+  }
+  .line-badge.active-badge { border: 2px solid #cc0000; color: #cc0000; background: #fff0f5; }
+  .line-badge.fixed-badge.active-badge { border: 2px solid #118ab2; color: #118ab2; background: #e0f7fa; }
+  .line-badge span { color: #333; margin-left: 8px; font-size: 16px; }
+
+  /* 表示切替スイッチ */
+  .display-mode-switch {
+    display: inline-flex; background: #e4e6eb; padding: 4px; border-radius: 8px; margin-bottom: 4px;
+  }
+  .mode-btn {
+    padding: 6px 12px; font-size: 12px; font-weight: bold; border: none; background: transparent;
+    border-radius: 6px; cursor: pointer; color: #666; transition: all 0.2s;
+  }
+  .mode-btn.active { background: #cc0000; color: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+
+  /* 機種選択モーダル */
+  .modal-overlay {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6);
+    z-index: 2000; display: none; justify-content: center; align-items: center;
+    backdrop-filter: blur(4px);
+  }
+  .modal-content {
+    background: #fff; width: 95%; max-width: 1000px; height: 85vh; border-radius: 12px;
+    display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+  }
+  .modal-header {
+    padding: 16px 24px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; background: #fafbfc;
+  }
+  .modal-header h3 { margin: 0; font-size: 18px; color: #333; }
+  .btn-close { background: none; border: none; font-size: 28px; cursor: pointer; color: #888; line-height: 1; }
+  .modal-body-container { display: flex; flex: 1; overflow: hidden; }
+  
+  .modal-sidebar {
+    width: 220px; background: #f8f9fa; border-right: 1px solid #ddd; overflow-y: auto;
+    display: flex; flex-direction: column;
+  }
+  .m-cat-btn {
+    padding: 16px 20px; text-align: left; background: none; border: none; border-bottom: 1px solid #eee;
+    font-size: 14px; font-weight: bold; color: #555; cursor: pointer; transition: all 0.2s;
+  }
+  .m-cat-btn:hover { background: #f0f2f5; }
+  .m-cat-btn.active { background: #0066cc; color: #fff; border-color: #0066cc; }
+
+  .modal-main {
+    flex: 1; overflow-y: auto; padding: 24px; background: #fdfdfd;
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 16px; align-content: start;
+  }
+  .device-card {
+    background: #fff; border: 2px solid #eee; border-radius: 12px; padding: 16px; text-align: center;
+    cursor: pointer; transition: all 0.2s; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 160px;
+  }
+  .device-card:hover { border-color: #cc0000; box-shadow: 0 4px 12px rgba(204,0,0,0.1); transform: translateY(-2px); }
+  .device-card-img {
+    width: 70px; height: 90px; background: #f4f5f7; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 12px;
+    display: flex; justify-content: center; align-items: center; font-size: 32px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+  }
+  .device-card-name { font-weight: bold; font-size: 13px; color: #333; line-height: 1.4; }
+  .device-card-price { font-size: 11px; color: #cc0000; font-weight: bold; margin-top: 6px; }
+
+  /* グラフ・空画面 */
+  .timeline-container { background: #fff; padding: 24px; border-radius: 12px; border: 1px solid #ddd; margin-top: 24px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); }
+  .timeline-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .timeline-table th, .timeline-table td { border-bottom: 1px solid #eee; padding: 16px; }
+  .timeline-table th { background: #fafbfc; text-align: left; width: 180px; font-weight: 800;}
+  .price-red { color: #cc0000; font-weight: 800; font-size: 16px; }
+  #emptyState { text-align: center; padding: 80px 20px; color: #888; }
+  #emptyState h2 { margin-bottom: 12px; color: #333; font-size: 20px; }
+
+  @media print {
+    body { background: #fff; }
+    .top-nav, .bottom-bar, .tab-bar-container { display: none !important; }
+    .view-container { display: block !important; padding: 0; }
+    #input-view { display: none !important; }
+    .sticky-summary { position: static; border: 1px solid #ddd; }
+  }
+</style>
+
+<div class="app-wrapper" translate="no">
+  <div class="top-nav no-print">
+    <div class="nav-buttons">
+      <div style="background:#cc0000; color:#fff; padding:8px 12px; font-weight:900; border-radius:8px; margin-right:8px; letter-spacing:1px;">docomo</div>
+      <button id="addMobileBtn" class="btn" style="color:#cc0000; border-color:#cc0000;" onclick="safeAddLine('mobile')" disabled>⏳ 読込中...</button>
+      <button id="addFixedBtn" class="btn" style="color:#118ab2; border-color:#118ab2;" onclick="safeAddLine('fixed')" disabled>⏳ 読込中...</button>
+      <button class="btn" style="margin-left:8px;" onclick="copyLine()">📋 コピー追加</button>
+      <button class="btn" style="margin-left: 8px;" onclick="resetAll()">🔄 全クリア</button>
+    </div>
+    <div class="nav-buttons">
+      <button id="btn-input" class="btn btn-primary" onclick="switchView('input')">入力画面</button>
+      <button id="btn-graph" class="btn" onclick="switchView('graph')">📊 合算グラフ・明細</button>
+    </div>
+  </div>
+
+  <div id="input-view" class="view-container view-active no-print" style="padding-bottom: 120px;">
+    <div id="emptyState">
+      <h2>上のボタンから回線を追加してください</h2>
+      <p>スマホのみ、光のみ、または両方の合算シミュレーションが可能です。</p>
+    </div>
+    <div class="tab-bar-container" id="tabBarContainer" style="display:none;">
+      <div class="tab-bar" id="tabBar"></div>
+    </div>
+    <div id="linesContainer" style="margin-top:20px;"></div>
+  </div>
+
+  <div id="graph-view" class="view-container" style="padding-bottom: 120px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+      <h2 style="margin: 0; font-size: 22px;">お支払い目安 (4年間の推移)</h2>
+      <button class="btn btn-primary no-print" onclick="window.print()">🖨️ 見積印刷</button>
+    </div>
+    <div style="background: #fff; padding: 16px; border-radius: 12px; border: 1px solid #ddd; height: 350px;">
+      <canvas id="costChart"></canvas>
+    </div>
+    <div class="timeline-container" id="timelineContainer"></div>
+  </div>
+
+  <div class="bottom-bar no-print">
+    <div class="line-badges" id="bottomLineTotals"></div>
+    <div style="display: flex; align-items: center; gap: 16px;">
+      <div style="text-align: right;">
+        <div>
+          <div class="display-mode-switch">
+            <button id="modeAllBtn" class="mode-btn active" onclick="setDisplayMode('all')">全回線 合算</button>
+            <button id="modeSingleBtn" class="mode-btn" onclick="setDisplayMode('single')">表示中の回線のみ</button>
+          </div>
+        </div>
+        <div id="bottomSummaryTitle" style="font-size: 11px; color: #666; font-weight:bold;">合算 月々のお支払目安 ※初月除く</div>
+        <div style="font-size: 34px; font-weight: 900; color: #cc0000; line-height: 1;">
+          <span id="grandTotalDisplay">0</span><span style="font-size: 18px;"> 円</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 機種選択モーダル -->
+<div id="deviceModal" class="modal-overlay">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>📱 機種を選択</h3>
+      <button class="btn-close" onclick="closeDeviceModal()">×</button>
+    </div>
+    <div class="modal-body-container">
+      <div class="modal-sidebar" id="modalSidebar"></div>
+      <div class="modal-main" id="modalGrid"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  window.safeAddLine = safeAddLine;
+  window.calculate = calculate;
+  window.switchView = switchView;
+  window.resetAll = resetAll;
+  window.copyLine = copyLine;
+  window.removeLine = removeLine;
+  window.setDisplayMode = setDisplayMode;
+  window.switchTab = switchTab;
+  window.updateHProv = updateHProv;
+  window.openDeviceModal = openDeviceModal;
+  window.closeDeviceModal = closeDeviceModal;
+  window.selectDevice = selectDevice;
+
+  const DEVICE_CSV_URL   = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSxkg_tTd2f_kAcqtH7hXHPq5zbSm-fOHRh3T3ZNAho31pmmGxhhnbbFxqojwDz3j5sRQfB2EZrmMPr/pub?gid=0&single=true&output=csv"; 
+  const PLAN_CSV_URL     = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSxkg_tTd2f_kAcqtH7hXHPq5zbSm-fOHRh3T3ZNAho31pmmGxhhnbbFxqojwDz3j5sRQfB2EZrmMPr/pub?gid=1240444955&single=true&output=csv"; 
+  const OPTION_CSV_URL   = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSxkg_tTd2f_kAcqtH7hXHPq5zbSm-fOHRh3T3ZNAho31pmmGxhhnbbFxqojwDz3j5sRQfB2EZrmMPr/pub?gid=585324112&single=true&output=csv"; 
+  const DISCOUNT_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSxkg_tTd2f_kAcqtH7hXHPq5zbSm-fOHRh3T3ZNAho31pmmGxhhnbbFxqojwDz3j5sRQfB2EZrmMPr/pub?gid=7262986&single=true&output=csv"; 
+  const H_PLAN_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSxkg_tTd2f_kAcqtH7hXHPq5zbSm-fOHRh3T3ZNAho31pmmGxhhnbbFxqojwDz3j5sRQfB2EZrmMPr/pub?gid=117037676&single=true&output=csv";
+  const H_PROV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSxkg_tTd2f_kAcqtH7hXHPq5zbSm-fOHRh3T3ZNAho31pmmGxhhnbbFxqojwDz3j5sRQfB2EZrmMPr/pub?gid=1826250395&single=true&output=csv";
+  const H_OPT_URL  = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSxkg_tTd2f_kAcqtH7hXHPq5zbSm-fOHRh3T3ZNAho31pmmGxhhnbbFxqojwDz3j5sRQfB2EZrmMPr/pub?gid=1143788577&single=true&output=csv";
+  const H_DISC_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSxkg_tTd2f_kAcqtH7hXHPq5zbSm-fOHRh3T3ZNAho31pmmGxhhnbbFxqojwDz3j5sRQfB2EZrmMPr/pub?gid=843369484&single=true&output=csv";
+  const H_DEV_URL  = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSxkg_tTd2f_kAcqtH7hXHPq5zbSm-fOHRh3T3ZNAho31pmmGxhhnbbFxqojwDz3j5sRQfB2EZrmMPr/pub?gid=1561318585&single=true&output=csv";
+  const H_KOJI_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSxkg_tTd2f_kAcqtH7hXHPq5zbSm-fOHRh3T3ZNAho31pmmGxhhnbbFxqojwDz3j5sRQfB2EZrmMPr/pub?gid=1393674300&single=true&output=csv"; 
+
+  let dDev={}, dOpt=[], dPlan={}, dDisc=[];
+  let hPlan={}, hProv=[], hOpt=[], hDisc=[], hDev={}, hKoji=[];
+  let deviceCategories = new Set(); 
+  
+  let myChart = null; 
+  let lineCounter = 0; 
+  let mandatoryFeeTotal = 0; 
+  let activeLineId = null;
+  let currentDisplayMode = 'all';
+  let editingDeviceLineId = null; 
+
+  let mPlanHtml = `<option value="none">未選択</option>`;
+  let mCallHtml = `<option value="none">未加入 (0円)</option>`, mHoshouHtml = `<option value="none">未加入 (0円)</option>`;
+  let mOtherHtml = ``, mSpHtml = ``, mCpHtml = ``;
+
+  let hPlanHtml = `<option value="none">未選択</option>`, hDevHtml = `<option value="none">機器なし / その他</option>`;
+  let hOptHtml = ``, hCpHtml = ``, hKojiHtml = ``;
+
+  function parseCSV(text) {
+    if (!text) return [];
+    text = text.replace(/^\uFEFF/, ''); 
+    const lines = text.trim().split('\n').filter(l => l && !l.match(/^\|?[\s:-]+\|?$/));
+    if (lines.length < 2) return [];
+
+    let delimiter = ',';
+    if (lines[0].includes('\t')) delimiter = '\t';
+    if (lines[0].includes('|') && !lines[0].includes(',')) delimiter = '|';
+
+    const splitRow = (str) => {
+        let arr = []; let cur = ''; let inQ = false;
+        for(let i=0; i<str.length; i++) {
+            let c = str[i];
+            if(c === '"') { inQ = !inQ; }
+            else if(c === delimiter && !inQ) { arr.push(cur.trim()); cur = ''; }
+            else { cur += c; }
+        }
+        arr.push(cur.trim());
+        if(delimiter === '|' && arr[0] === '') arr.shift();
+        if(delimiter === '|' && arr[arr.length-1] === '') arr.pop();
+        return arr;
+    };
+
+    const rawHeaders = splitRow(lines[0]);
+    const headers = rawHeaders.map(h => h.replace(/[\uFEFF\u200B\*\s"']/g, '').toLowerCase().replace(/ｉ/g, 'i').replace(/ｄ/g, 'd'));
+
+    return lines.slice(1).map(line => {
+       const vals = splitRow(line);
+       let obj = {};
+       headers.forEach((h, idx) => { obj[h] = vals[idx] || ""; });
+       return obj;
+    }).filter(obj => Object.keys(obj).some(k => obj[k] !== ""));
+  }
+
+  const getNum = (val) => Number(String(val).replace(/[,円回]/g, '').trim()) || 0;
+
+  async function init() {
+    try {
+      const fetchTxt = async (url) => { if(!url) return ""; try { return await (await fetch(url)).text(); } catch(e) { return ""; } };
+
+      const [tDev, tPlan, tOpt, tDisc, tHPlan, tHProv, tHOpt, tHDisc, tHDev, tHKoji] = await Promise.all([
+        fetchTxt(DEVICE_CSV_URL), fetchTxt(PLAN_CSV_URL), fetchTxt(OPTION_CSV_URL), fetchTxt(DISCOUNT_CSV_URL),
+        fetchTxt(H_PLAN_URL), fetchTxt(H_PROV_URL), fetchTxt(H_OPT_URL), fetchTxt(H_DISC_URL),
+        fetchTxt(H_DEV_URL), fetchTxt(H_KOJI_CSV_URL)
+      ]);
+
+      parseCSV(tDev).forEach(p => {
+        let id = p.id || p.ID || `dev_${Math.random()}`;
+        let name = p.name || p.名前 || p.名称 || p.機種名 || id;
+        if(name === id && !p.price_total) return; 
+        
+        let cat = p.category || p.カテゴリ || "スマホ"; 
+        deviceCategories.add(cat);
+        
+        dDev[id] = {
+          name: name, category: cat, price_total: getNum(p.price_total || p.総額),
+          hoshou_price: getNum(p.hoshou_price), applecare_price: getNum(p.applecare_price), applecare_theft_price: getNum(p.applecare_theft_price),
+          kisyu: {m1: getNum(p.kisyu_m1), m2: getNum(p.kisyu_m2), m24: getNum(p.kisyu_m24)},
+          shinki: {m1: getNum(p.shinki_m1), m2: getNum(p.shinki_m2), m24: getNum(p.shinki_m24)},
+          mnp: {m1: getNum(p.mnp_m1), m2: getNum(p.mnp_m2), m24: getNum(p.mnp_m24)}
+        };
+      });
+
+      parseCSV(tPlan).forEach(p => {
+        let id = p.id || p.ID || `plan_${Math.random()}`;
+        let name = p.name || p.名前 || p.名称 || p.プラン名 || id;
+        let price = getNum(p.price || p.料金);
+        dPlan[id] = { name: name, price: price, family: (p.family_ok||p.family)==="1", dcard: (p.dcard_ok||p.dcard)==="1", hikari: (p.hikari_ok||p.hikari)==="1", denki: (p.denki_ok||p.denki)==="1", raw: p };
+        mPlanHtml += `<option value="${id}">${name} : ${price.toLocaleString()}円</option>`;
+      });
+
+      parseCSV(tOpt).forEach(o => {
+        let id = o.id || o.ID || `opt_${Math.random()}`;
+        let name = o.name || o.名前 || o.名称 || id;
+        let price = getNum(o.price || o.料金);
+        let type = o.type || o.タイプ || "other";
+        if(type==="mandatory") mandatoryFeeTotal += price;
+        else if(type==="call") mCallHtml += `<option value="${id}" data-price="${price}">${name} (+${price}円)</option>`;
+        else if(type==="hoshou") mHoshouHtml += `<option value="${id}" data-price="${price}">${name} (+${price}円)</option>`;
+        else if(type==="other") mOtherHtml += `<label class="check-label dyn-other-opt" data-price="${price}"><input type="checkbox" onchange="calculate()"> ${name}</label>`;
+        else if(type==="special") mSpHtml += `<label class="check-label special-opt special-opt-${id}" data-price="${price}"><input type="checkbox" onchange="calculate()"> <span style="color:#cc0000; font-weight:bold;">${name}</span></label>`;
+      });
+
+      parseCSV(tDisc).forEach(d => {
+        let id = d.id || d.ID || `disc_${Math.random()}`;
+        let name = d.name || d.名前 || d.名称 || d.キャンペーン名 || id;
+        dDisc.push({id: id, name: name, duration: getNum(d.duration || d.期間)});
+        mCpHtml += `<label class="check-label camp-opt camp-opt-${id}"><input type="checkbox" onchange="calculate()"><span style="color:#cc0000; font-weight:bold;">${name}</span></label>`;
+      });
+
+      parseCSV(tHPlan).forEach(p => {
+        let id = p.id || p.ID || `hplan_${Math.random()}`;
+        let name = p.name || p.名前 || p.名称 || p.プラン名 || id;
+        let price = getNum(p.price || p.料金);
+        let pType = p.prov_type || p.type || "none";
+        hPlan[id] = { name: name, price: price, prov_type: pType, raw: p };
+        hPlanHtml += `<option value="${id}">${name} : ${price.toLocaleString()}円</option>`;
+      });
+
+      parseCSV(tHProv).forEach(p => {
+        let id = p.id || p.ID || `hprov_${Math.random()}`;
+        let name = p.name || p.名前 || p.プロバイダ名 || id;
+        let pType = p.prov_type || p.type || "none";
+        hProv.push({id: id, name: name, prov_type: pType});
+      });
+
+      parseCSV(tHOpt).forEach(o => {
+        let id = o.id || o.ID || `hopt_${Math.random()}`;
+        let name = o.name || o.名前 || o.名称 || id;
+        let price = getNum(o.price || o.料金);
+        hOpt.push({id: id, name: name, price: price});
+        hOptHtml += `<label class="check-label dyn-hopt" data-price="${price}"><input type="checkbox" onchange="calculate()"> ${name} (+${price}円)</label>`;
+      });
+
+      parseCSV(tHDisc).forEach(d => {
+        let id = d.id || d.ID || `hdisc_${Math.random()}`;
+        let name = d.name || d.名前 || d.名称 || d.キャンペーン名 || id;
+        hDisc.push({id: id, name: name});
+        hCpHtml += `<label class="check-label hcamp-opt hcamp-opt-${id}"><input type="checkbox" onchange="calculate()"><span style="color:#cc0000; font-weight:bold;">${name}</span></label>`;
+      });
+
+      parseCSV(tHDev).forEach(d => {
+        let id = d.id || d.ID || `hdev_${Math.random()}`;
+        let name = d.name || d.名前 || d.名称 || d.機器名 || id;
+        hDev[id] = {
+          name: name, price_total: getNum(d.price_total||d.総額),
+          d12_1: getNum(d.div12_m1||d.d12_1), d12_2: getNum(d.div12_m2||d.d12_2),
+          d24_1: getNum(d.div24_m1||d.d24_1), d24_2: getNum(d.div24_m2||d.d24_2),
+          d36_1: getNum(d.div36_m1||d.d36_1), d36_2: getNum(d.div36_m2||d.d36_2),
+          d48_1: getNum(d.div48_m1||d.d48_1), d48_2: getNum(d.div48_m2||d.d48_2),
+          sup_1: getNum(d.support_m1||d.sup_1), sup_2: getNum(d.support_m2||d.sup_2), sup_t: getNum(d.support_times||d.sup_t)
+        };
+        hDevHtml += `<option value="${id}">${name}</option>`;
+      });
+
+      parseCSV(tHKoji).forEach(k => {
+        let id = k.id || k.ID || `hkoji_${Math.random()}`;
+        let name = k.name || k.名前 || k.名称 || k.工事名 || id;
+        let total = getNum(k.price_total || k.総額);
+        let d12m1 = getNum(k.d12_m1), d12m2 = getNum(k.d12_m2);
+        let d24m1 = getNum(k.d24_m1), d24m2 = getNum(k.d24_m2);
+        hKojiHtml += `<label class="check-label dyn-hkoji" data-total="${total}" data-d12m1="${d12m1}" data-d12m2="${d12m2}" data-d24m1="${d24m1}" data-d24m2="${d24m2}"><input type="checkbox" onchange="calculate()"> ${name}</label>`;
+      });
+
+      document.getElementById('addMobileBtn').disabled = false;
+      document.getElementById('addMobileBtn').innerHTML = '📱 スマホ追加';
+      document.getElementById('addFixedBtn').disabled = false;
+      document.getElementById('addFixedBtn').innerHTML = '🌐 光・home5G追加';
+
+      initChart(new Array(48).fill(0), new Array(48).fill(0));
+    } catch (e) { console.error(e); alert("読み込みエラーが発生しました。"); }
+  }
+
+  function openDeviceModal(lineId) {
+    editingDeviceLineId = lineId;
+    document.getElementById('deviceModal').style.display = 'flex';
+    
+    const sidebar = document.getElementById('modalSidebar');
+    sidebar.innerHTML = '';
+    
+    const noneBtn = document.createElement('button');
+    noneBtn.className = 'm-cat-btn';
+    noneBtn.innerText = '💳 SIMのみ (機器なし)';
+    noneBtn.onclick = (e) => { selectDevice('none'); };
+    sidebar.appendChild(noneBtn);
+
+    let firstCat = null;
+    deviceCategories.forEach(cat => {
+      if(!firstCat) firstCat = cat;
+      const btn = document.createElement('button');
+      btn.className = 'm-cat-btn';
+      btn.innerText = cat;
+      btn.onclick = (e) => {
+        document.querySelectorAll('.m-cat-btn').forEach(b => b.classList.remove('active'));
+        e.target.classList.add('active');
+        renderDeviceGrid(cat);
+      };
+      sidebar.appendChild(btn);
+    });
+
+    if(firstCat) {
+      sidebar.childNodes[1].classList.add('active'); 
+      renderDeviceGrid(firstCat);
+    }
+  }
+
+  function closeDeviceModal() {
+    document.getElementById('deviceModal').style.display = 'none';
+    editingDeviceLineId = null;
+  }
+
+  function renderDeviceGrid(category) {
+    const grid = document.getElementById('modalGrid');
+    grid.innerHTML = '';
+    
+    for(const id in dDev) {
+      if(dDev[id].category === category) {
+        let nameLower = dDev[id].name.toLowerCase();
+        let isApple = nameLower.includes("iphone") || nameLower.includes("ipad");
+        let icon = isApple ? "🍎" : "📱";
+        if(nameLower.includes("キッズ")) icon = "🧒";
+        
+        let priceText = dDev[id].price_total > 0 ? `総額目安: ${dDev[id].price_total.toLocaleString()}円` : "";
+        
+        grid.innerHTML += `
+          <div class="device-card" onclick="selectDevice('${id}')">
+            <div class="device-card-img">${icon}</div>
+            <div class="device-card-name">${dDev[id].name}</div>
+            <div class="device-card-price">${priceText}</div>
+          </div>
+        `;
+      }
+    }
+  }
+
+  function selectDevice(devId) {
+    if(!editingDeviceLineId) return;
+    const block = document.getElementById(editingDeviceLineId);
+    if(block) {
+        block.querySelector('.hiddenDeviceVal').value = devId;
+        block.querySelector('.displayDeviceName').innerText = devId === 'none' ? '💳 SIMのみ (機器なし)' : dDev[devId].name;
+    }
+    closeDeviceModal();
+    calculate();
+  }
+
+  function safeAddLine(type) { try { addLine(type); } catch(e) { console.error("Line Add Error:", e); } }
+
+  function setDisplayMode(mode) {
+    currentDisplayMode = mode;
+    document.getElementById('modeAllBtn').classList.toggle('active', mode === 'all');
+    document.getElementById('modeSingleBtn').classList.toggle('active', mode === 'single');
+    document.getElementById('bottomSummaryTitle').innerText = mode === 'all' ? '合算 月々のお支払目安 ※初月除く' : '表示中回線 月々のお支払目安 ※初月除く';
+    calculate();
+  }
+
+  function switchView(viewId) {
+    document.querySelectorAll('.view-container').forEach(el => el.classList.remove('view-active'));
+    document.getElementById(viewId + '-view').classList.add('view-active');
+    document.querySelectorAll('.top-nav .btn').forEach(btn => btn.classList.remove('btn-primary'));
+    document.getElementById('btn-' + viewId).classList.add('btn-primary');
+    if(viewId === 'graph') calculate();
+  }
+
+  function renderTabs() {
+    const tabBar = document.getElementById('tabBar');
+    const tabBarContainer = document.getElementById('tabBarContainer');
+    const lines = document.querySelectorAll('.line-container');
+    
+    if (lines.length === 0) {
+      tabBarContainer.style.display = 'none';
+      document.getElementById('emptyState').style.display = 'block';
+    } else {
+      tabBarContainer.style.display = 'block';
+      document.getElementById('emptyState').style.display = 'none';
+      tabBar.innerHTML = '';
+      lines.forEach((line, index) => {
+        const isFixed = line.getAttribute("data-type") === "fixed";
+        const btn = document.createElement('button');
+        btn.className = `tab-btn ${line.id === activeLineId ? 'active' : ''} ${isFixed ? 'fixed-tab' : ''}`;
+        btn.innerText = isFixed ? `🌐 ${index + 1}回線目(光/5G)` : `📱 ${index + 1}回線目(スマホ)`;
+        btn.onclick = () => switchTab(line.id);
+        tabBar.appendChild(btn);
+      });
+    }
+  }
+
+  function switchTab(lineId) {
+    activeLineId = lineId;
+    document.querySelectorAll('.line-container').forEach(l => l.style.display = 'none');
+    document.getElementById(lineId).style.display = 'block';
+    renderTabs();
+    calculate();
+  }
+
+  function addLine(type) {
+    lineCounter++;
+    const lineId = "line_" + lineCounter;
+    document.querySelectorAll('.line-container').forEach(l => l.style.display = 'none');
+
+    const div = document.createElement('div');
+    div.className = 'line-container';
+    div.id = lineId;
+    div.setAttribute("data-type", type);
+    div.style.display = 'block';
+
+    if (type === 'mobile') {
+      div.innerHTML = `
+        <div class="two-columns">
+          <div class="col-left">
+            <div class="section-card">
+              <div class="section-header">📱 機種・ご契約種別</div>
+              <div class="section-body">
+                <div class="form-group"><span class="form-label">ご契約種別</span><select class="contractTypeSelect" onchange="calculate()"><option value="kisyu">機種変更</option><option value="shinki">新規契約</option><option value="mnp">のりかえ(MNP)</option></select></div>
+                
+                <div class="form-group">
+                  <span class="form-label">選択機種</span>
+                  <div style="display:flex; justify-content:space-between; align-items:center; border:2px solid #cc0000; border-radius:8px; padding:12px 16px; background:#fff;">
+                    <span class="displayDeviceName" style="font-weight:900; font-size:16px; color:#333;">💳 SIMのみ (機器なし)</span>
+                    <button class="btn btn-primary" onclick="openDeviceModal('${lineId}')" style="padding:8px 16px;">変更</button>
+                    <input type="hidden" class="hiddenDeviceVal" value="none">
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <span class="form-label">お支払い方法</span>
+                  <select class="payMethodSelect" onchange="calculate()">
+                    <option value="kaedoki">いつでもカエドキプログラム (24回)</option>
+                    <option value="ikkatsu">一括払い</option>
+                  </select>
+                </div>
+
+                <div class="form-group" style="background:#f9f9f9; padding:12px; border-radius:8px; border:1px solid #eee;">
+                  <span class="form-label" style="color:#cc0000;">店舗独自値引・頭金</span>
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <span style="color:#cc0000; font-weight:bold;">-</span>
+                    <input type="number" class="manualDeviceDiscount" value="0" min="0" onchange="calculate()" style="text-align:right;">
+                    <span>円</span>
+                  </div>
+                  <div style="font-size:11px; color:#888; margin-top:6px;">※元の分割金: <span class="devicePriceHint">0円/月</span></div>
+                </div>
+              </div>
+              <div class="section-footer">2ヶ月目以降 機種代金目安: <span class="col-total-device price-text">0</span>円/月</div>
+            </div>
+
+            <div class="section-card">
+              <div class="section-header">📄 料金プラン・オプション</div>
+              <div class="section-body">
+                <div class="form-group"><span class="form-label">料金プラン</span><select class="planSelect" onchange="calculate()">${mPlanHtml}</select></div>
+                <div style="display:flex; gap:16px;">
+                  <div class="form-group" style="flex:1;"><span class="form-label">通話オプション</span><select class="callOptSelect" onchange="calculate()">${mCallHtml}</select></div>
+                  <div class="form-group" style="flex:1;"><span class="form-label">補償サービス</span><select class="hoshouSelect" onchange="calculate()">${mHoshouHtml}</select></div>
+                </div>
+                <div class="form-group" style="border-top:1px dashed #eee; padding-top:16px; margin-top:8px;">
+                  <span class="form-label">その他オプション</span>
+                  <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">${mSpHtml}${mOtherHtml}</div>
+                </div>
+                <div style="margin-top:12px; padding-top:12px; font-size:12px; color:#888; text-align:right; border-top:1px solid #eee;">ユニバーサル・リレー料等: ${mandatoryFeeTotal}円</div>
+              </div>
+              <div class="section-footer">プラン・OP 計: <span class="col-total-plan price-text">0</span>円</div>
+            </div>
+          </div>
+
+          <div class="col-right">
+            <div class="section-card">
+              <div class="section-header">🎁 割引・キャンペーン</div>
+              <div class="section-body">
+                <div class="form-group" style="background:#fffaf0; border:1px solid #ffeeba; padding:12px; border-radius:8px; margin-bottom:16px;">
+                  <span class="form-label" style="color:#d39e00;">家族割・ネット割 (この回線へ適用)</span>
+                  <select class="familySelect" onchange="calculate()" style="margin-bottom:8px;"><option value="0">家族割 なし</option><option value="550">みんなドコモ割 (2回線)</option><option value="1210">みんなドコモ割 (3回線以上)</option></select>
+                  <label class="check-label hikariCheck" style="margin-bottom:0; background:#fff;"><input type="checkbox" onchange="calculate()"> 光 / home 5G セット割</label>
+                </div>
+                <div class="form-group">
+                  <span class="form-label">その他 定常割引</span>
+                  <select class="dcardSelect" onchange="calculate()" style="margin-bottom:8px;"><option value="0">dカード割 無</option><option value="220">一般 (-220円)</option><option value="550">GOLD (-550円)</option></select>
+                  <label class="check-label denkiCheck"><input type="checkbox" onchange="calculate()"> でんきセット割</label>
+                </div>
+                <div class="form-group" style="border-top:1px dashed #eee; padding-top:16px; margin-top:8px;">
+                  <span class="form-label">キャンペーン</span>${mCpHtml}
+                </div>
+              </div>
+              <div class="section-footer">割引 計: <span style="color:#cc0000;">-<span class="col-total-discount price-text">0</span>円</span></div>
+            </div>
+
+            <div class="section-card sticky-summary">
+              <div class="section-header" style="background:#cc0000; color:#fff; border-bottom:none;">💰 この回線の月額目安</div>
+              <div class="section-body" style="text-align:center; padding: 24px;">
+                <div style="font-size: 13px; color: #888; font-weight:bold;">2ヵ月目以降 (割引適用後)</div>
+                <div style="font-size: 38px; font-weight: 900; color: #cc0000; margin-top:8px; letter-spacing:-1px;">
+                  <span class="line-final-total">0</span><span style="font-size: 18px; font-weight:bold;"> 円/月</span>
+                </div>
+                <button class="btn-delete-line" onclick="removeLine('${lineId}')">🗑️ この回線を削除</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    } else {
+      div.innerHTML = `
+        <div class="two-columns">
+          <div class="col-left">
+            <div class="section-card">
+              <div class="section-header">🌐 工事・ルーター</div>
+              <div class="section-body">
+                <div style="display:flex; gap:16px;">
+                  <div class="form-group" style="flex:2;"><span class="form-label">ルーター機器</span><select class="hDevSelect" onchange="calculate()">${hDevHtml}</select></div>
+                  <div class="form-group" style="flex:1;"><span class="form-label">機器お支払い方法</span><select class="hPaySelect" onchange="calculate()"><option value="1">一括払い</option><option value="12">12回分割</option><option value="24">24回分割</option><option value="36" selected>36回分割</option><option value="48">48回分割</option></select></div>
+                </div>
+                <div class="form-group" style="border-top:1px dashed #eee; padding-top:16px; margin-top:8px;">
+                  
+                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                    <span class="form-label" style="margin-bottom:0;">工事費・その他費用</span>
+                    <select class="hKojiPaySelect" onchange="calculate()" style="width:160px; padding:6px; font-size:13px; border-color:#cc0000; color:#cc0000; font-weight:bold;">
+                      <option value="24" selected>工事費: 24回分割</option>
+                      <option value="12">工事費: 12回分割</option>
+                      <option value="1">工事費: 一括払い</option>
+                    </select>
+                  </div>
+                  
+                  <div id="hKojiContainer_${lineId}" style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">${hKojiHtml}</div>
+                  
+                  <!-- ✨ 工事費総額の表示 ✨ -->
+                  <div style="text-align:right; font-size:12px; color:#cc0000; font-weight:bold; margin-top:8px;">
+                    ※工事費総額: <span class="koji-total-display">0</span>円
+                  </div>
+                </div>
+              </div>
+              <div class="section-footer">2ヶ月目以降 工事・端末 計: <span class="col-total-device price-text">0</span>円/月</div>
+            </div>
+
+            <div class="section-card">
+              <div class="section-header">📄 ネット・プロバイダ</div>
+              <div class="section-body">
+                <div style="display:flex; gap:16px;">
+                  <div class="form-group" style="flex:1;"><span class="form-label">料金プラン</span><select class="hPlanSelect" onchange="updateHProv('${lineId}'); calculate();">${hPlanHtml}</select></div>
+                  <div class="form-group" style="flex:1;"><span class="form-label">プロバイダー</span><select class="hProvSelect" onchange="calculate()"><option value="none">不要 / 未選択</option></select></div>
+                </div>
+                <div class="form-group" style="border-top:1px dashed #eee; padding-top:16px; margin-top:8px;">
+                  <span class="form-label">オプション</span>
+                  <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">${hOptHtml}</div>
+                </div>
+              </div>
+              <div class="section-footer">ネット・OP 計: <span class="col-total-plan price-text">0</span>円</div>
+            </div>
+          </div>
+
+          <div class="col-right">
+            <div class="section-card">
+              <div class="section-header">🎁 割引・キャンペーン</div>
+              <div class="section-body">
+                <div class="form-group"><span class="form-label">キャンペーン・特典</span>${hCpHtml}</div>
+                <div class="monthly-support-notice" style="display:none; color:#c72a48; font-weight:bold; margin-top:20px; padding:12px; background:#fff0f5; border-radius:8px; border:1px solid #ffccd5; text-align:center;">
+                  ✅ 月々サポート適用: <br><span style="font-size:18px;">-<span class="ms-val">0</span>円/月</span>
+                </div>
+              </div>
+              <div class="section-footer">割引 計: <span style="color:#cc0000;">-<span class="col-total-discount price-text">0</span>円</span></div>
+            </div>
+
+            <div class="section-card sticky-summary">
+              <div class="section-header" style="background:#cc0000; color:#fff; border-bottom:none;">💰 この回線の月額目安</div>
+              <div class="section-body" style="text-align:center; padding: 24px;">
+                <div style="font-size: 13px; color: #888; font-weight:bold;">2ヵ月目以降 (割引適用後)</div>
+                <div style="font-size: 38px; font-weight: 900; color: #cc0000; margin-top:8px; letter-spacing:-1px;">
+                  <span class="line-final-total">0</span><span style="font-size: 18px; font-weight:bold;"> 円/月</span>
+                </div>
+                <button class="btn-delete-line" onclick="removeLine('${lineId}')">🗑️ この回線を削除</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    document.getElementById('linesContainer').appendChild(div);
+    activeLineId = lineId;
+    if(type==='fixed') updateHProv(lineId);
+    renderTabs(); calculate();
+  }
+
+  function updateHProv(lineId) {
+    const block = document.getElementById(lineId);
+    if(!block) return;
+    const planSel = block.querySelector('.hPlanSelect');
+    if(!planSel) return;
+    const planId = planSel.value;
+    const provSel = block.querySelector('.hProvSelect');
+    const pType = hPlan[planId] ? hPlan[planId].prov_type : 'none';
+    
+    provSel.innerHTML = '<option value="none">不要 / 未選択</option>';
+    if (pType === 'none') { provSel.disabled = true; } 
+    else {
+      provSel.disabled = false;
+      hProv.forEach(p => { if(p.prov_type === pType || p.prov_type === 'all') provSel.innerHTML += `<option value="${p.id}">${p.name}</option>`; });
+    }
+  }
+
+  function copyLine() {
+    if(!activeLineId) return;
+    const src = document.getElementById(activeLineId);
+    const type = src.getAttribute("data-type");
+    addLine(type); 
+    const dest = document.getElementById(activeLineId);
+    
+    src.querySelectorAll('select').forEach((sel, i) => { if(dest.querySelectorAll('select')[i]) dest.querySelectorAll('select')[i].value = sel.value; });
+    src.querySelectorAll('input[type="number"]').forEach((inp, i) => { if(dest.querySelectorAll('input[type="number"]')[i]) dest.querySelectorAll('input[type="number"]')[i].value = inp.value; });
+    src.querySelectorAll('input[type="checkbox"]').forEach((chk, i) => { if(dest.querySelectorAll('input[type="checkbox"]')[i]) dest.querySelectorAll('input[type="checkbox"]')[i].checked = chk.checked; });
+    
+    if(type==='mobile') {
+        let hVal = src.querySelector('.hiddenDeviceVal');
+        let dName = src.querySelector('.displayDeviceName');
+        if(hVal && dest.querySelector('.hiddenDeviceVal')) dest.querySelector('.hiddenDeviceVal').value = hVal.value;
+        if(dName && dest.querySelector('.displayDeviceName')) dest.querySelector('.displayDeviceName').innerText = dName.innerText;
+    } else {
+        updateHProv(activeLineId);
+    }
+    calculate();
+  }
+
+  function removeLine(id) {
+    let el = document.getElementById(id);
+    if(el) el.remove();
+    const remain = document.querySelectorAll('.line-container');
+    if (remain.length > 0) {
+      activeLineId = remain[0].id;
+      remain[0].style.display = 'block';
+    } else { activeLineId = null; }
+    renderTabs(); calculate();
+  }
+
+  function resetAll() {
+    if(!confirm("全てクリアして空にしますか？")) return;
+    document.getElementById("linesContainer").innerHTML = "";
+    lineCounter = 0; activeLineId = null;
+    renderTabs(); calculate();
+  }
+
+  function initChart(pData, dData) {
+    const ctx = document.getElementById('costChart');
+    if(!ctx) return;
+    if(myChart) myChart.destroy();
+    myChart = new Chart(ctx.getContext('2d'), {
+      type: 'bar',
+      data: { labels: Array.from({length:48}, (_,i)=>`${i+1}ヵ月目`), datasets: [{label:'工事/機器(合算)', data:dData, backgroundColor:'#ff4d6d', stack:'0'}, {label:'通信/OP料(合算)', data:pData, backgroundColor:'#118ab2', stack:'0'}] },
+      options: { responsive:true, maintainAspectRatio:false, scales:{x:{stacked:true}, y:{stacked:true, beginAtZero:true}}, plugins:{legend:{position:'top'}} }
+    });
+  }
+
+  function calculate() {
+    let grandM2 = 0; let singleActiveM2 = 0;
+    let arrP = new Array(48).fill(0); let arrD = new Array(48).fill(0); let adminTot = 0;
+    const blocks = document.querySelectorAll('.line-container');
+    let bHtml = '';
+
+    if (blocks.length === 0) {
+      if(document.getElementById("bottomLineTotals")) document.getElementById("bottomLineTotals").innerHTML = "";
+      if(document.getElementById("grandTotalDisplay")) document.getElementById("grandTotalDisplay").innerText = "0";
+      if(myChart){ myChart.data.datasets[0].data=arrD; myChart.data.datasets[1].data=arrP; myChart.update(); }
+      generateTimeline(arrP, arrD, 0); return;
+    }
+
+    blocks.forEach((block, index) => {
+      const type = block.getAttribute("data-type");
+      let lM2 = 0; let lineAdminFee = 4950; adminTot += lineAdminFee;
+
+      if (type === 'mobile') {
+        const ct = block.querySelector('.contractTypeSelect')?.value || "kisyu";
+        const devId = block.querySelector('.hiddenDeviceVal')?.value || "none";
+        const payMethod = block.querySelector('.payMethodSelect')?.value || "kaedoki";
+        const pId = block.querySelector('.planSelect')?.value || "none";
+        const pObj = dPlan[pId] || {price:0, raw:{}};
+        
+        let dName = (dDev[devId] && dDev[devId].name) ? dDev[devId].name : "";
+        const isKidsDev = (devId !== "none" && dName.includes("キッズ"));
+        const isAhamo = pId.includes("ahamo") || (pObj.name && pObj.name.toLowerCase().includes("ahamo"));
+        const isKidsP = pId.includes("kids") || (pObj.name && pObj.name.includes("キッズ"));
+
+        Array.from(block.querySelector('.planSelect').options).forEach(o => {
+          if(o.value==="none") return;
+          let isKidsP_opt = o.value.includes("kids") || o.text.includes("キッズ");
+          let isDeb = o.value.includes("debut") || o.text.includes("デビュー");
+          let hide = false;
+          if(isKidsDev){ if(!isKidsP_opt) hide=true; } else { if(isKidsP_opt) hide=true; }
+          if(ct==="mnp" && isDeb) hide=true;
+          o.style.display = hide ? "none" : ""; o.disabled = hide;
+          if(hide && pId===o.value) block.querySelector('.planSelect').value = "none";
+        });
+        
+        if(isKidsDev && block.querySelector('.planSelect').value==="none") {
+            let kOpt = Array.from(block.querySelector('.planSelect').options).find(o=>o.value.includes("kids"));
+            if(kOpt) block.querySelector('.planSelect').value = kOpt.value;
+        }
+
+        let d1=0, d2=0, d24=0;
+        let md = parseInt(block.querySelector('.manualDeviceDiscount')?.value)||0;
+        
+        if(devId!=="none" && dDev[devId]){
+          let dd = dDev[devId];
+          if (payMethod === 'ikkatsu') {
+            d1 = Math.max(0, dd.price_total - md);
+            d2 = 0;
+            d24 = 0;
+            if(block.querySelector('.devicePriceHint')) block.querySelector('.devicePriceHint').innerText = "一括払い";
+          } else {
+            d1 = Math.max(0, dd[ct].m1 - md); 
+            d2 = Math.max(0, dd[ct].m2 - md); 
+            d24 = dd[ct].m24;
+            if(block.querySelector('.devicePriceHint')) block.querySelector('.devicePriceHint').innerText = dd[ct].m2.toLocaleString() + "円/月";
+          }
+        } else {
+          if(block.querySelector('.devicePriceHint')) block.querySelector('.devicePriceHint').innerText = "0円/月";
+        }
+        if(block.querySelector('.col-total-device')) block.querySelector('.col-total-device').innerText = d2.toLocaleString();
+
+        const cSel = block.querySelector('.callOptSelect');
+        if(cSel){
+          if(isKidsP){ cSel.value="none"; cSel.disabled=true; cSel.style.opacity="0.4"; }
+          else {
+            cSel.disabled=false; cSel.style.opacity="1";
+            Array.from(cSel.options).forEach(o => {
+              if(o.value==="none") return;
+              let op = Number(o.getAttribute("data-price")); let n = o.text.split(' ')[0];
+              if(isAhamo){
+                if(op==880 || n.includes("5分")){ o.style.display="none"; o.disabled=true; if(cSel.value===o.value) cSel.value="none"; }
+                else if(op==1980 || n.includes("かけ放題")){ o.style.display=""; o.disabled=false; o.text=`${n} (+1100円)`; }
+              } else { o.style.display=""; o.disabled=false; o.text=`${n} (+${op}円)`; }
+            });
+          }
+        }
+        
+        block.querySelectorAll('.dyn-other-opt').forEach(l=>{ let cb=l.querySelector('input'); if(isKidsP){ cb.disabled=true; cb.checked=false; l.style.opacity="0.4"; }else{ cb.disabled=false; l.style.opacity="1"; } });
+
+        let oChk = false;
+        block.querySelectorAll('.special-opt').forEach(lbl => {
+            if(lbl.innerText.includes('大盛り')) {
+                let cb = lbl.querySelector('input');
+                if(!isAhamo || isKidsP) { cb.disabled = true; cb.checked = false; lbl.style.opacity = "0.4"; }
+                else { cb.disabled = false; lbl.style.opacity = "1"; oChk = cb.checked; }
+            }
+        });
+
+        block.querySelectorAll('.special-opt').forEach(lbl => {
+            if(lbl.innerText.includes('ポイ活')) {
+                let cb = lbl.querySelector('input');
+                if(!isAhamo || !oChk || isKidsP) { cb.disabled = true; cb.checked = false; lbl.style.opacity = "0.4"; }
+                else { cb.disabled = false; lbl.style.opacity = "1"; }
+            }
+        });
+
+        const hSel = block.querySelector('.hoshouSelect');
+        if(hSel){
+          Array.from(hSel.options).forEach(o=>{
+            if(o.value==="none") return; let sh=true; let hp=0; let n=o.text.split(' ')[0];
+            if(o.value==="smart_anshin") hp = (devId!=="none"&&dDev[devId])?dDev[devId].hoshou_price : Number(o.getAttribute("data-price"));
+            else if(o.value==="applecare") { if(devId==="none"||!dDev[devId]||dDev[devId].applecare_price===0) sh=false; else hp=dDev[devId].applecare_price; }
+            else if(o.value==="applecare_theft") { if(devId==="none"||!dDev[devId]||dDev[devId].applecare_theft_price===0) sh=false; else hp=dDev[devId].applecare_theft_price; }
+            else hp=Number(o.getAttribute("data-price"));
+            if(sh){ o.style.display=""; o.disabled=false; o.text=`${n} (+${hp}円)`; } else { o.style.display="none"; o.disabled=true; if(hSel.value===o.value) hSel.value="none"; }
+          });
+        }
+
+        let pTot = pObj.price + mandatoryFeeTotal;
+        if(cSel && cSel.value!=="none"){ let p=Number(cSel.options[cSel.selectedIndex].getAttribute("data-price")); if(isAhamo && p==1980) p=1100; pTot+=p; }
+        if(hSel && hSel.value!=="none"){
+          if(hSel.value==="smart_anshin"&&dDev[devId]) pTot+=dDev[devId].hoshou_price;
+          else if(hSel.value==="applecare"&&dDev[devId]) pTot+=dDev[devId].applecare_price;
+          else if(hSel.value==="applecare_theft"&&dDev[devId]) pTot+=dDev[devId].applecare_theft_price;
+          else pTot+=Number(hSel.options[hSel.selectedIndex].getAttribute("data-price"));
+        }
+        block.querySelectorAll('.dyn-other-opt input:checked, .special-opt input:checked').forEach(cb=>pTot+=Number(cb.closest('.check-label').getAttribute("data-price")));
+        if(block.querySelector('.col-total-plan')) block.querySelector('.col-total-plan').innerText = pTot.toLocaleString();
+
+        const famV = parseInt(block.querySelector('.familySelect')?.value || 0);
+        const hikV = block.querySelector('.hikariCheck input')?.checked ? 1210 : 0;
+        if(block.querySelector('.familySelect')) block.querySelector('.familySelect').disabled = !pObj.family;
+        if(block.querySelector('.hikariCheck input')) block.querySelector('.hikariCheck input').disabled = !pObj.hikari;
+        
+        const setD = (s, a)=>{ let el=block.querySelector(s); if(!el)return; el.disabled=!a; if(el.closest('.check-label')) el.closest('.check-label').style.opacity=a?"1":"0.4"; else el.style.opacity=a?"1":"0.4"; if(!a){if(el.type==='checkbox')el.checked=false;else el.value="0";} };
+        setD('.dcardSelect', pObj.dcard); setD('.denkiCheck input', pObj.denki);
+        
+        dDisc.forEach(d=>{ 
+            let a = (Number(pObj.raw[d.id+'_val'])||0) > 0; 
+            if(d.name.includes("U15") && pObj.name && pObj.name.includes("デビュー")) a = true; 
+            setD(`.camp-opt-${d.id} input`, a); 
+        });
+
+        let dcVal = parseInt(block.querySelector('.dcardSelect')?.value || 0);
+        let dnVal = block.querySelector('.denkiCheck input')?.checked && pObj.denki ? 110 : 0;
+        let dM2 = (pObj.family?famV:0) + (pObj.hikari?hikV:0) + (pObj.dcard?dcVal:0) + dnVal;
+        
+        dDisc.forEach(d=>{
+          let cb=block.querySelector(`.camp-opt-${d.id} input`);
+          if(cb&&cb.checked){ 
+              let v=Number(pObj.raw[d.id+'_val'])||0; 
+              if(v===0 && d.name.includes("U15") && pObj.name && pObj.name.includes("デビュー")) {
+                  v = pObj.name.includes("20GB") ? 1870 : 1100; 
+              }
+              dM2+=v; 
+          }
+        });
+        
+        let cap = pTot - mandatoryFeeTotal;
+        if(block.querySelector('.col-total-discount')) block.querySelector('.col-total-discount').innerText = Math.max(0, Math.min(dM2, cap)).toLocaleString();
+
+        for(let m=1; m<=48; m++){
+          let md=0; if(pObj.family)md+=famV; if(pObj.hikari)md+=hikV; if(pObj.dcard)md+=dcVal; if(dnVal>0)md+=dnVal;
+          dDisc.forEach(d=>{ 
+              let cb=block.querySelector(`.camp-opt-${d.id} input`); 
+              if(cb&&cb.checked){ 
+                  let v=Number(pObj.raw[d.id+'_val'])||0; 
+                  if(v===0 && d.name.includes("U15") && pObj.name && pObj.name.includes("デビュー")) {
+                      v = pObj.name.includes("20GB") ? 1870 : 1100; 
+                  }
+                  if(d.duration===0||m<=d.duration) md+=v; 
+              } 
+          });
+          
+          let pFinal = Math.max(0, (pTot - mandatoryFeeTotal) - md) + mandatoryFeeTotal; 
+          if(m===1) arrP[m-1]+=(pFinal+lineAdminFee); else arrP[m-1]+=pFinal;
+
+          let dv=0; if(m===1)dv=d1; else if(m<=23)dv=d2; else if(m===24)dv=d24;
+          arrD[m-1]+=dv;
+          if(m===2){ lM2 = pFinal+dv; grandM2 += lM2; }
+        }
+        if(block.querySelector('.line-final-total')) block.querySelector('.line-final-total').innerText = lM2.toLocaleString();
+        if (block.id === activeLineId) singleActiveM2 = lM2;
+        let bClass = (block.id===activeLineId) ? 'active-badge' : '';
+        bHtml += `<div class="line-badge ${bClass}" onclick="switchTab('${block.id}')">📱 ${index+1}回線目<span>${lM2.toLocaleString()}円</span></div>`;
+      
+      } else if (type === 'fixed') {
+        const devSel = block.querySelector('.hDevSelect');
+        const planSel = block.querySelector('.hPlanSelect');
+        const selDevName = (devSel && devSel.value!=="none"&&hDev[devSel.value]) ? hDev[devSel.value].name : "";
+        const isHome5GDev = devSel && (devSel.value.includes("home") || devSel.value.includes("hr") || selDevName.includes("home") || selDevName.includes("HR"));
+
+        let planText = "";
+        if(planSel){
+          Array.from(planSel.options).forEach(opt => {
+            if (opt.value === "none") return;
+            let isHomePlan = opt.value.includes("home") || opt.text.includes("home") || opt.text.includes("5G");
+            let hide = false;
+            if (isHome5GDev) { if(!isHomePlan) hide=true; } 
+            else { if(isHomePlan && devSel.value!=="none") hide=true; }
+
+            if (hide) {
+              opt.style.display = "none"; opt.disabled = true;
+              if (planSel.value === opt.value) planSel.value = "none";
+            } else {
+              opt.style.display = ""; opt.disabled = false;
+            }
+          });
+          
+          if (isHome5GDev && planSel.value==="none") {
+              let hOpt = Array.from(planSel.options).find(o=>o.value.includes("home") || o.text.includes("home"));
+              if(hOpt) planSel.value = hOpt.value;
+          }
+          if(planSel.selectedIndex >= 0) {
+              planText = planSel.options[planSel.selectedIndex].text;
+          }
+        }
+
+        const isHomePlanSelected = planText.includes("home") || planText.includes("5G");
+        const isHome5G = isHome5GDev || isHomePlanSelected;
+        const is10G = planText.includes("10ギガ") || planText.includes("10G");
+
+        const kojiPaySel = block.querySelector('.hKojiPaySelect');
+        if (kojiPaySel) {
+            kojiPaySel.disabled = isHome5G;
+            kojiPaySel.style.opacity = isHome5G ? "0.4" : "1";
+        }
+
+        block.querySelectorAll('.dyn-hkoji').forEach(lbl => {
+            let cb = lbl.querySelector('input');
+            if (isHome5G) {
+                cb.checked = false;
+                cb.disabled = true;
+                lbl.style.opacity = "0.4";
+            } else {
+                cb.disabled = false;
+                lbl.style.opacity = "1";
+            }
+        });
+
+        block.querySelectorAll('.dyn-hopt').forEach(lbl => {
+            let cb = lbl.querySelector('input');
+            let txt = lbl.innerText;
+            let isHikariOnly = txt.includes("光") || txt.includes("テレビ") || txt.includes("TV") || txt.includes("ひかり");
+            if (isHome5G && isHikariOnly) {
+                cb.checked = false;
+                cb.disabled = true;
+                lbl.style.opacity = "0.4";
+            } else {
+                cb.disabled = false;
+                lbl.style.opacity = "1";
+            }
+        });
+
+        block.querySelectorAll('.hcamp-opt').forEach(lbl => {
+            let cb = lbl.querySelector('input');
+            let txt = lbl.innerText;
+            let is10GCampaign = txt.includes("10ギガ") || txt.includes("10G");
+            
+            if (is10GCampaign) {
+                if (!is10G) {
+                    cb.checked = false;
+                    cb.disabled = true;
+                    lbl.style.opacity = "0.4";
+                } else {
+                    cb.disabled = false;
+                    lbl.style.opacity = "1";
+                }
+            }
+        });
+
+        const devId = devSel ? devSel.value : "none";
+        const payM = block.querySelector('.hPaySelect')?.value || "36";
+        const pId = planSel ? planSel.value : "none";
+        const pObj = hPlan[pId] || {price:0, raw:{}};
+        
+        let pTot = pObj.price;
+        block.querySelectorAll('.dyn-hopt input:checked').forEach(cb => pTot+=Number(cb.closest('.check-label').getAttribute("data-price")));
+        if(block.querySelector('.col-total-plan')) block.querySelector('.col-total-plan').innerText = pTot.toLocaleString();
+
+        let devM2 = 0, supM2 = 0;
+        let dObj = hDev[devId];
+        if (dObj) {
+           if(payM==='12') devM2 = dObj.d12_2; else if(payM==='24') devM2 = dObj.d24_2; else if(payM==='36') devM2 = dObj.d36_2; else if(payM==='48') devM2 = dObj.d48_2;
+           if(dObj.sup_t >= 2) supM2 = dObj.sup_2;
+        }
+
+        const supNotice = block.querySelector('.monthly-support-notice');
+        if (supNotice) {
+            if (supM2 > 0) {
+                supNotice.style.display = "block";
+                let msVal = supNotice.querySelector('.ms-val');
+                if(msVal) msVal.innerText = supM2.toLocaleString();
+            } else {
+                supNotice.style.display = "none";
+            }
+        }
+
+        const kojiPayMode = block.querySelector('.hKojiPaySelect')?.value || "24";
+        let kFeeM2 = 0;
+        let monthKojiArr = new Array(48).fill(0);
+        let kojiTotalSum = 0; // ★ 追加: 工事費の総額を計算
+
+        block.querySelectorAll('.dyn-hkoji input:checked').forEach(cb => {
+            const lbl = cb.closest('.check-label');
+            let total = Number(lbl.getAttribute("data-total")) || 0;
+            kojiTotalSum += total; // ★ 追加: 総額に足す
+            
+            let m1 = 0, m2 = 0, times = 1;
+
+            if (kojiPayMode === '1') {
+                times = 1; m1 = total; m2 = 0;
+            } else if (kojiPayMode === '12') {
+                times = 12; 
+                m1 = Number(lbl.getAttribute("data-d12m1")) || 0; 
+                m2 = Number(lbl.getAttribute("data-d12m2")) || 0;
+            } else {
+                times = 24; 
+                m1 = Number(lbl.getAttribute("data-d24m1")) || 0; 
+                m2 = Number(lbl.getAttribute("data-d24m2")) || 0;
+            }
+
+            if (times >= 2) kFeeM2 += m2;
+
+            for (let i = 0; i < 48; i++) {
+                if (i === 0) monthKojiArr[i] += m1;
+                else if (i < times) monthKojiArr[i] += m2;
+            }
+        });
+
+        // ★ 追加: 画面に工事費総額を表示
+        if(block.querySelector('.koji-total-display')) {
+            block.querySelector('.koji-total-display').innerText = kojiTotalSum.toLocaleString();
+        }
+
+        if(block.querySelector('.col-total-device')) block.querySelector('.col-total-device').innerText = (devM2 + kFeeM2).toLocaleString();
+
+        let dM2 = 0;
+        hDisc.forEach(d => {
+           let cb=block.querySelector(`.hcamp-opt-${d.id} input`);
+           if(cb&&cb.checked) {
+              let v = Number(pObj.raw[d.id+'_val']) || 0;
+              if(v===0 && d.price) v = d.price;
+              if(v===0 && d.name.includes("ワンコイン")) v = Math.max(0, pTot - 500);
+              dM2 += v;
+           }
+        });
+        if(block.querySelector('.col-total-discount')) block.querySelector('.col-total-discount').innerText = (dM2 + supM2).toLocaleString();
+
+        let aFee = 3300; adminTot += aFee; 
+
+        for(let m=1; m<=48; m++){
+           let md = 0;
+           hDisc.forEach(d=>{ let cb=block.querySelector(`.hcamp-opt-${d.id} input`); if(cb&&cb.checked){ 
+               let v=Number(pObj.raw[d.id+'_val'])||0; 
+               if(v===0 && d.price) v = d.price;
+               if(v===0 && d.name.includes("ワンコイン")) v = Math.max(0, pTot - 500);
+               let dur = d.duration || (d.name.includes("ワンコイン") ? 6 : 0);
+               if(dur===0||m<=dur)md+=v; 
+           } });
+
+           let dv = 0, sup = 0;
+           if (dObj) {
+              if(payM==='1' && m===1) dv = dObj.price_total;
+              else if(payM==='12' && m<=12) dv = (m===1)?dObj.d12_1:dObj.d12_2;
+              else if(payM==='24' && m<=24) dv = (m===1)?dObj.d24_1:dObj.d24_2;
+              else if(payM==='36' && m===1) dv = dObj.d36_1; else if(payM==='36' && m<=36) dv = dObj.d36_2;
+              else if(payM==='48' && m===1) dv = dObj.d48_1; else if(payM==='48' && m<=48) dv = dObj.d48_2;
+              if(m===1) sup=dObj.sup_1; else if(m<=dObj.sup_t) sup=dObj.sup_2;
+           }
+           
+           dv += monthKojiArr[m-1];
+
+           let pFinal = Math.max(0, pTot - md - sup);
+           if(m===1) arrP[m-1]+=(pFinal+aFee); else arrP[m-1]+=pFinal;
+           arrD[m-1]+=dv;
+
+           if(m===2){ lM2 = pFinal+dv; grandM2 += lM2; }
+        }
+        if(block.querySelector('.line-final-total')) block.querySelector('.line-final-total').innerText = lM2.toLocaleString();
+        if (block.id === activeLineId) singleActiveM2 = lM2;
+        let bClass = (block.id===activeLineId) ? 'fixed-badge active-badge' : 'fixed-badge';
+        bHtml += `<div class="line-badge ${bClass}" onclick="switchTab('${block.id}')">🌐 ${index+1}回線目<span>${lM2.toLocaleString()}円</span></div>`;
+      }
+    });
+
+    if(document.getElementById("bottomLineTotals")) document.getElementById("bottomLineTotals").innerHTML = bHtml;
+    
+    let displayPrice = currentDisplayMode === 'all' ? grandM2 : singleActiveM2;
+    if(document.getElementById("grandTotalDisplay")) document.getElementById("grandTotalDisplay").innerText = displayPrice.toLocaleString();
+
+    if(myChart){ myChart.data.datasets[0].data=arrD; myChart.data.datasets[1].data=arrP; myChart.update(); }
+    generateTimeline(arrP, arrD, adminTot);
+  }
+
+  function generateTimeline(arrP, arrD, aFee) {
+    let html = `<table class="timeline-table"><tbody><tr><th>1ヵ月目 (合算)</th><td><div style="margin-bottom:4px;">・契約事務手数料等: <span class="price-red">${aFee.toLocaleString()}円</span></div><div style="margin-bottom:4px;">・通信/OP料: <span class="price-red">${(arrP[0]-aFee).toLocaleString()}円</span></div><div>・機器/工事費: <span class="price-red">${arrD[0].toLocaleString()}円</span></div><div style="margin-top:8px; background:#eee; padding:4px 8px; display:inline-block; font-weight:bold;">計: ${(arrP[0]+arrD[0]).toLocaleString()}円</div></td></tr><tr><th>2〜23ヵ月目 (合算)</th><td><div style="margin-bottom:4px;">・通信/OP料: <span class="price-red">${arrP[1].toLocaleString()}円/月</span></div><div>・機器/工事費: <span class="price-red">${arrD[1].toLocaleString()}円/月</span></div><div style="margin-top:8px; background:#e6f2ff; color:#0066cc; padding:4px 8px; display:inline-block; font-weight:bold;">合算目安: ${(arrP[1]+arrD[1]).toLocaleString()}円</div></td></tr><tr><th>24ヵ月目〜 (合算)</th><td><div style="margin-bottom:4px;">・通信/OP料: <span class="price-red">${arrP[23].toLocaleString()}円/月</span></div><div>・機器残価等: <span class="price-red">${arrD[23].toLocaleString()}円</span></div></td></tr></tbody></table>`;
+    if(document.getElementById('timelineContainer')) document.getElementById('timelineContainer').innerHTML = html;
+  }
+
+  window.onload = () => {
+    document.getElementById('addMobileBtn').disabled = true;
+    document.getElementById('addFixedBtn').disabled = true;
+    init();
+  };
+</script>
