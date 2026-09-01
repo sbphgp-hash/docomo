@@ -1,3 +1,4 @@
+<!-- iPad最適化タグ -->
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="料金シミュ">
@@ -12,108 +13,114 @@
     color: #333; overflow-x: hidden;
   }
 
-  /* 上部ナビゲーション */
+  /* 上部ナビゲーション（余白圧縮） */
   .top-nav {
-    background: #ffffff; padding: 12px 24px;
+    background: #ffffff; padding: 8px 16px;
     display: flex; justify-content: space-between; align-items: center;
     box-shadow: 0 2px 10px rgba(0,0,0,0.05); position: sticky; top: 0; z-index: 100;
   }
 
-  .nav-buttons { display: flex; gap: 12px; align-items: center; }
+  .nav-buttons { display: flex; gap: 8px; align-items: center; }
   .btn {
-    padding: 10px 16px; border-radius: 8px; font-size: 14px; font-weight: bold;
+    padding: 8px 12px; border-radius: 8px; font-size: 13px; font-weight: bold;
     cursor: pointer; border: 1px solid #ddd; background: #fff; color: #555;
-    transition: all 0.2s ease; display: flex; align-items: center; gap: 6px;
+    transition: all 0.2s ease; display: flex; align-items: center; gap: 4px;
   }
   .btn:hover:not(:disabled) { background: #f8f9fa; border-color: #ccc; }
   .btn:disabled { opacity: 0.6; cursor: not-allowed; }
   .btn-primary { background: #cc0000; color: #fff; border: none; }
   .btn-primary:hover:not(:disabled) { background: #aa0000; }
   
-  /* タブ */
-  .tab-bar-container { padding: 24px 24px 0 24px; max-width: 1300px; margin: 0 auto; }
+  /* タブ（余白圧縮） */
+  .tab-bar-container { padding: 12px 16px 0 16px; max-width: 1400px; margin: 0 auto; }
   .tab-bar {
-    display: inline-flex; background: #e4e6eb; padding: 4px; border-radius: 12px; gap: 4px;
+    display: inline-flex; background: #e4e6eb; padding: 4px; border-radius: 10px; gap: 4px;
     overflow-x: auto; max-width: 100%;
   }
   .tab-btn {
-    padding: 10px 24px; background: transparent; border: none;
-    border-radius: 8px; cursor: pointer; font-weight: bold; color: #666; font-size: 14px;
+    padding: 8px 20px; background: transparent; border: none;
+    border-radius: 8px; cursor: pointer; font-weight: bold; color: #666; font-size: 13px;
     transition: all 0.2s ease; white-space: nowrap;
   }
   .tab-btn.active { background: #ffffff; color: #cc0000; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
   .tab-btn.active.fixed-tab { color: #118ab2; }
 
-  /* 2カラムレイアウト */
-  .view-container { display: none; padding: 24px; max-width: 1300px; margin: 0 auto; }
+  /* ✨ 3カラム横並びレイアウトへ大改修 ✨ */
+  .view-container { display: none; padding: 16px; max-width: 1400px; margin: 0 auto; }
   .view-active { display: block; }
-  .two-columns { display: flex; gap: 24px; align-items: flex-start; }
-  .col-left { flex: 2; display: flex; flex-direction: column; gap: 20px; }
-  .col-right { flex: 1; display: flex; flex-direction: column; gap: 20px; }
+  .two-columns { display: flex; gap: 16px; align-items: stretch; }
+  
+  /* col-leftを横並び（row）にして2つのカードを分割 */
+  .col-left { flex: 2.2; display: flex; flex-direction: row; gap: 16px; min-width: 0; }
+  .col-left > .section-card { flex: 1; min-width: 0; } 
+  .col-right { flex: 1; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 
-  /* カードデザイン */
+  /* カードデザイン（高さピッタリに調整） */
   .section-card {
     background: #ffffff; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.03);
     border: 1px solid #eaedf1; overflow: hidden;
+    display: flex; flex-direction: column;
   }
   .section-header {
-    padding: 14px 20px; font-weight: 800; font-size: 15px; color: #333;
+    padding: 10px 16px; font-weight: 800; font-size: 14px; color: #333;
     border-bottom: 1px solid #f0f2f5; background: #fafbfc;
   }
-  .section-body { padding: 20px; }
+  .section-body { padding: 12px 16px; flex: 1; overflow-y: auto; }
   .section-footer {
-    padding: 12px 20px; background: #fafbfc; border-top: 1px solid #f0f2f5;
-    text-align: right; font-weight: bold; font-size: 14px; color: #555;
+    padding: 10px 16px; background: #fafbfc; border-top: 1px solid #f0f2f5;
+    text-align: right; font-weight: bold; font-size: 13px; color: #555;
   }
-  .price-text { font-size: 18px; color: #333; }
+  .price-text { font-size: 16px; color: #333; }
 
   /* 追従パネル */
-  .sticky-summary { position: sticky; top: 90px; border: 2px solid #cc0000; }
+  .sticky-summary { position: sticky; top: 70px; border: 2px solid #cc0000; }
   .btn-delete-line {
-    margin-top: 16px; padding: 10px; width: 100%; border-radius: 8px; border: 1px solid #ffccd5;
-    background: #fff0f5; color: #cc0000; font-weight: bold; cursor: pointer; transition: all 0.2s;
+    margin-top: 12px; padding: 8px; width: 100%; border-radius: 8px; border: 1px solid #ffccd5;
+    background: #fff0f5; color: #cc0000; font-weight: bold; cursor: pointer; transition: all 0.2s; font-size:12px;
   }
   .btn-delete-line:hover { background: #ffe6ea; }
 
-  /* フォーム要素 */
-  .form-group { margin-bottom: 16px; }
+  /* フォーム要素（サイズ圧縮） */
+  .form-group { margin-bottom: 10px; }
   .form-group:last-child { margin-bottom: 0; }
-  .form-label { display: block; font-size: 12px; color: #555; margin-bottom: 6px; font-weight: bold; }
+  .form-label { display: block; font-size: 11px; color: #555; margin-bottom: 4px; font-weight: bold; }
   select, input[type="number"] {
-    width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px;
-    font-size: 14px; box-sizing: border-box; background: #fdfdfd; transition: border 0.2s;
+    width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 8px;
+    font-size: 13px; box-sizing: border-box; background: #fdfdfd; transition: border 0.2s;
   }
   select:focus, input[type="number"]:focus { border-color: #cc0000; outline: none; }
+  
+  /* オプションのチェックボタン（密集化） */
   .check-label {
-    display: flex; align-items: center; gap: 8px; font-size: 14px; margin-bottom: 12px;
-    cursor: pointer; padding: 8px 12px; border-radius: 8px; border: 1px solid #eee; transition: all 0.2s;
+    display: flex; align-items: center; gap: 6px; font-size: 12px; margin-bottom: 6px;
+    cursor: pointer; padding: 6px 10px; border-radius: 8px; border: 1px solid #eee; transition: all 0.2s;
   }
   .check-label:hover { background: #f9f9f9; }
-  .check-label input { transform: scale(1.3); accent-color: #cc0000; }
+  .check-label input { transform: scale(1.2); accent-color: #cc0000; margin:0; }
 
   /* 下部バー */
   .bottom-bar {
     position: fixed; bottom: 0; left: 0; right: 0;
     background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px);
-    border-top: 1px solid #ddd; padding: 12px 32px;
+    border-top: 1px solid #ddd; padding: 8px 24px;
     display: flex; justify-content: space-between; align-items: center;
     z-index: 100; box-shadow: 0 -4px 20px rgba(0,0,0,0.05);
   }
-  .line-badges { display: flex; gap: 12px; flex-wrap: wrap; }
+  .line-badges { display: flex; gap: 8px; flex-wrap: wrap; }
   .line-badge {
-    background: #fff; border: 1px solid #ddd; padding: 8px 16px; border-radius: 20px;
-    font-size: 13px; font-weight: bold; color: #555; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+    background: #fff; border: 1px solid #ddd; padding: 6px 12px; border-radius: 20px;
+    font-size: 12px; font-weight: bold; color: #555; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.02);
   }
   .line-badge.active-badge { border: 2px solid #cc0000; color: #cc0000; background: #fff0f5; }
   .line-badge.fixed-badge.active-badge { border: 2px solid #118ab2; color: #118ab2; background: #e0f7fa; }
-  .line-badge span { color: #333; margin-left: 8px; font-size: 16px; }
+  .line-badge span { color: #333; margin-left: 6px; font-size: 14px; }
 
   /* 表示切替スイッチ */
   .display-mode-switch {
-    display: inline-flex; background: #e4e6eb; padding: 4px; border-radius: 8px; margin-bottom: 4px;
+    display: inline-flex; background: #e4e6eb; padding: 4px; border-radius: 8px; margin-bottom: 2px;
   }
   .mode-btn {
-    padding: 6px 12px; font-size: 12px; font-weight: bold; border: none; background: transparent;
+    padding: 4px 10px; font-size: 11px; font-weight: bold; border: none; background: transparent;
     border-radius: 6px; cursor: pointer; color: #666; transition: all 0.2s;
   }
   .mode-btn.active { background: #cc0000; color: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
@@ -171,32 +178,31 @@
   #emptyState { text-align: center; padding: 80px 20px; color: #888; }
   #emptyState h2 { margin-bottom: 12px; color: #333; font-size: 20px; }
 
-  @media print {
-    body { background: #fff; }
-    .top-nav, .bottom-bar, .tab-bar-container { display: none !important; }
-    .view-container { display: block !important; padding: 0; }
-    #input-view { display: none !important; }
-    .sticky-summary { position: static; border: 1px solid #ddd; }
+  /* 画面が小さい時（縦向きなど）は元の縦積みへ戻す安全装置 */
+  @media (max-width: 900px) {
+    .two-columns { flex-direction: column; }
+    .col-left { flex-direction: column; width: 100%; }
+    .col-right { width: 100%; }
   }
 </style>
 
 <div class="app-wrapper" translate="no">
   <div class="top-nav no-print">
     <div class="nav-buttons">
-      <div style="background:#cc0000; color:#fff; padding:8px 12px; font-weight:900; border-radius:8px; margin-right:8px; letter-spacing:1px;">docomo</div>
+      <div style="background:#cc0000; color:#fff; padding:6px 10px; font-weight:900; border-radius:8px; margin-right:4px; letter-spacing:1px; font-size:14px;">docomo</div>
       <button id="addMobileBtn" class="btn" style="color:#cc0000; border-color:#cc0000;" onclick="safeAddLine('mobile')" disabled>⏳ 読込中...</button>
       <button id="addFixedBtn" class="btn" style="color:#118ab2; border-color:#118ab2;" onclick="safeAddLine('fixed')" disabled>⏳ 読込中...</button>
-      <button class="btn" style="margin-left:8px;" onclick="copyLine()">📋 コピー追加</button>
-      <button class="btn" style="margin-left:8px; border-color:#28a745; color:#28a745;" onclick="forceFetchData()">⬇️ マスタ更新</button>
-      <button class="btn" style="margin-left: 8px;" onclick="resetAll()">🔄 全クリア</button>
+      <button class="btn" style="margin-left:4px;" onclick="copyLine()">📋 コピー</button>
+      <button class="btn" style="margin-left:4px; border-color:#28a745; color:#28a745;" onclick="forceFetchData()">⬇️ 更新</button>
+      <button class="btn" style="margin-left:4px;" onclick="resetAll()">🔄 クリア</button>
     </div>
     <div class="nav-buttons">
       <button id="btn-input" class="btn btn-primary" onclick="switchView('input')">入力画面</button>
-      <button id="btn-graph" class="btn" onclick="switchView('graph')">📊 合算グラフ・明細</button>
+      <button id="btn-graph" class="btn" onclick="switchView('graph')">📊 合算グラフ</button>
     </div>
   </div>
 
-  <div id="input-view" class="view-container view-active no-print" style="padding-bottom: 120px;">
+  <div id="input-view" class="view-container view-active no-print" style="padding-bottom: 100px;">
     <div id="emptyState">
       <h2>上のボタンから回線を追加してください</h2>
       <p>スマホのみ、光のみ、または両方の合算シミュレーションが可能です。</p>
@@ -204,7 +210,7 @@
     <div class="tab-bar-container" id="tabBarContainer" style="display:none;">
       <div class="tab-bar" id="tabBar"></div>
     </div>
-    <div id="linesContainer" style="margin-top:20px;"></div>
+    <div id="linesContainer" style="margin-top:16px;"></div>
   </div>
 
   <div id="graph-view" class="view-container" style="padding-bottom: 120px;">
@@ -229,14 +235,15 @@
           </div>
         </div>
         <div id="bottomSummaryTitle" style="font-size: 11px; color: #666; font-weight:bold;">合算 月々のお支払目安 ※初月除く</div>
-        <div style="font-size: 34px; font-weight: 900; color: #cc0000; line-height: 1;">
-          <span id="grandTotalDisplay">0</span><span style="font-size: 18px;"> 円</span>
+        <div style="font-size: 28px; font-weight: 900; color: #cc0000; line-height: 1;">
+          <span id="grandTotalDisplay">0</span><span style="font-size: 14px;"> 円</span>
         </div>
       </div>
     </div>
   </div>
 </div>
 
+<!-- 機種選択モーダル -->
 <div id="deviceModal" class="modal-overlay">
   <div class="modal-content">
     <div class="modal-header">
@@ -615,9 +622,9 @@
                 
                 <div class="form-group">
                   <span class="form-label">選択機種</span>
-                  <div style="display:flex; justify-content:space-between; align-items:center; border:2px solid #cc0000; border-radius:8px; padding:12px 16px; background:#fff;">
-                    <span class="displayDeviceName" style="font-weight:900; font-size:16px; color:#333;">💳 SIMのみ (機器なし)</span>
-                    <button class="btn btn-primary" onclick="openDeviceModal('${lineId}')" style="padding:8px 16px;">変更</button>
+                  <div style="display:flex; justify-content:space-between; align-items:center; border:2px solid #cc0000; border-radius:8px; padding:8px 12px; background:#fff;">
+                    <span class="displayDeviceName" style="font-weight:900; font-size:14px; color:#333;">💳 SIMのみ (機器なし)</span>
+                    <button class="btn btn-primary" onclick="openDeviceModal('${lineId}')" style="padding:6px 12px;">変更</button>
                     <input type="hidden" class="hiddenDeviceVal" value="none">
                   </div>
                 </div>
@@ -630,32 +637,32 @@
                   </select>
                 </div>
 
-                <div class="form-group" style="background:#f9f9f9; padding:12px; border-radius:8px; border:1px solid #eee;">
+                <div class="form-group" style="background:#f9f9f9; padding:10px; border-radius:8px; border:1px solid #eee;">
                   <span class="form-label" style="color:#cc0000;">店舗独自値引・頭金</span>
                   <div style="display:flex; align-items:center; gap:8px;">
                     <span style="color:#cc0000; font-weight:bold;">-</span>
                     <input type="number" class="manualDeviceDiscount" value="0" min="0" onchange="calculate()" style="text-align:right;">
                     <span>円</span>
                   </div>
-                  <div style="font-size:11px; color:#888; margin-top:6px;">※元の分割金: <span class="devicePriceHint">0円/月</span></div>
+                  <div style="font-size:11px; color:#888; margin-top:4px;">※元の分割金: <span class="devicePriceHint">0円/月</span></div>
                 </div>
               </div>
-              <div class="section-footer">2ヶ月目以降 機種代金目安: <span class="col-total-device price-text">0</span>円/月</div>
+              <div class="section-footer">機種代金目安: <span class="col-total-device price-text">0</span>円/月</div>
             </div>
 
             <div class="section-card">
               <div class="section-header">📄 料金プラン・オプション</div>
               <div class="section-body">
                 <div class="form-group"><span class="form-label">料金プラン</span><select class="planSelect" onchange="calculate()">${mPlanHtml}</select></div>
-                <div style="display:flex; gap:16px;">
+                <div style="display:flex; gap:12px;">
                   <div class="form-group" style="flex:1;"><span class="form-label">通話オプション</span><select class="callOptSelect" onchange="calculate()">${mCallHtml}</select></div>
                   <div class="form-group" style="flex:1;"><span class="form-label">補償サービス</span><select class="hoshouSelect" onchange="calculate()">${mHoshouHtml}</select></div>
                 </div>
-                <div class="form-group" style="border-top:1px dashed #eee; padding-top:16px; margin-top:8px;">
+                <div class="form-group" style="border-top:1px dashed #eee; padding-top:8px; margin-top:8px;">
                   <span class="form-label">その他オプション</span>
                   <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">${mSpHtml}${mOtherHtml}</div>
                 </div>
-                <div style="margin-top:12px; padding-top:12px; font-size:12px; color:#888; text-align:right; border-top:1px solid #eee;">ユニバーサル・リレー料等: ${mandatoryFeeTotal}円</div>
+                <div style="margin-top:8px; padding-top:8px; font-size:11px; color:#888; text-align:right; border-top:1px solid #eee;">ﾕﾆﾊﾞｰｻﾙ料等: ${mandatoryFeeTotal}円</div>
               </div>
               <div class="section-footer">プラン・OP 計: <span class="col-total-plan price-text">0</span>円</div>
             </div>
@@ -665,7 +672,7 @@
             <div class="section-card">
               <div class="section-header">🎁 割引・キャンペーン</div>
               <div class="section-body">
-                <div class="form-group" style="background:#fffaf0; border:1px solid #ffeeba; padding:12px; border-radius:8px; margin-bottom:16px;">
+                <div class="form-group" style="background:#fffaf0; border:1px solid #ffeeba; padding:10px; border-radius:8px; margin-bottom:12px;">
                   <span class="form-label" style="color:#d39e00;">家族割・ネット割 (この回線へ適用)</span>
                   <select class="familySelect" onchange="calculate()" style="margin-bottom:8px;"><option value="0">家族割 なし</option><option value="550">みんなドコモ割 (2回線)</option><option value="1210">みんなドコモ割 (3回線以上)</option></select>
                   <label class="check-label hikariCheck" style="margin-bottom:0; background:#fff;"><input type="checkbox" onchange="calculate()"> 光 / home 5G セット割</label>
@@ -675,7 +682,7 @@
                   <select class="dcardSelect" onchange="calculate()" style="margin-bottom:8px;"><option value="0">dカード割 無</option><option value="220">一般 (-220円)</option><option value="550">GOLD (-550円)</option></select>
                   <label class="check-label denkiCheck"><input type="checkbox" onchange="calculate()"> でんきセット割</label>
                 </div>
-                <div class="form-group" style="border-top:1px dashed #eee; padding-top:16px; margin-top:8px;">
+                <div class="form-group" style="border-top:1px dashed #eee; padding-top:8px; margin-top:8px;">
                   <span class="form-label">キャンペーン</span>${mCpHtml}
                 </div>
               </div>
@@ -684,7 +691,7 @@
 
             <div class="section-card sticky-summary">
               <div class="section-header" style="background:#cc0000; color:#fff; border-bottom:none;">💰 この回線の月額目安</div>
-              <div class="section-body" style="text-align:center; padding: 24px;">
+              <div class="section-body" style="text-align:center; padding: 16px;">
                 <div style="font-size: 13px; color: #888; font-weight:bold;">2ヵ月目以降 (割引適用後)</div>
                 <div style="font-size: 38px; font-weight: 900; color: #cc0000; margin-top:8px; letter-spacing:-1px;">
                   <span class="line-final-total">0</span><span style="font-size: 18px; font-weight:bold;"> 円/月</span>
@@ -702,11 +709,11 @@
             <div class="section-card">
               <div class="section-header">📄 ネット・プロバイダ</div>
               <div class="section-body">
-                <div style="display:flex; gap:16px;">
+                <div style="display:flex; gap:12px;">
                   <div class="form-group" style="flex:1;"><span class="form-label">料金プラン</span><select class="hPlanSelect" onchange="updateHProv('${lineId}'); calculate();">${hPlanHtml}</select></div>
                   <div class="form-group" style="flex:1;"><span class="form-label">プロバイダー</span><select class="hProvSelect" onchange="calculate()"><option value="none">不要 / 未選択</option></select></div>
                 </div>
-                <div class="form-group" style="border-top:1px dashed #eee; padding-top:16px; margin-top:8px;">
+                <div class="form-group" style="border-top:1px dashed #eee; padding-top:8px; margin-top:8px;">
                   <span class="form-label">オプション</span>
                   <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">${hOptHtml}</div>
                 </div>
@@ -717,15 +724,15 @@
             <div class="section-card">
               <div class="section-header">🌐 工事・ルーター</div>
               <div class="section-body">
-                <div style="display:flex; gap:16px;">
+                <div style="display:flex; gap:12px;">
                   <div class="form-group" style="flex:2;"><span class="form-label">ルーター機器</span><select class="hDevSelect" onchange="calculate()">${hDevHtml}</select></div>
-                  <div class="form-group" style="flex:1;"><span class="form-label">機器お支払い方法</span><select class="hPaySelect" onchange="calculate()"><option value="1">一括払い</option><option value="12">12回分割</option><option value="24">24回分割</option><option value="36" selected>36回分割</option><option value="48">48回分割</option></select></div>
+                  <div class="form-group" style="flex:1;"><span class="form-label">お支払い方法</span><select class="hPaySelect" onchange="calculate()"><option value="1">一括払い</option><option value="12">12回分割</option><option value="24">24回分割</option><option value="36" selected>36回分割</option><option value="48">48回分割</option></select></div>
                 </div>
-                <div class="form-group" style="border-top:1px dashed #eee; padding-top:16px; margin-top:8px;">
+                <div class="form-group" style="border-top:1px dashed #eee; padding-top:8px; margin-top:8px;">
                   
-                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
                     <span class="form-label" style="margin-bottom:0;">工事費・その他費用</span>
-                    <select class="hKojiPaySelect" onchange="calculate()" style="width:160px; padding:6px; font-size:13px; border-color:#cc0000; color:#cc0000; font-weight:bold;">
+                    <select class="hKojiPaySelect" onchange="calculate()" style="width:160px; padding:6px; font-size:12px; border-color:#cc0000; color:#cc0000; font-weight:bold;">
                       <option value="24" selected>工事費: 24回分割</option>
                       <option value="12">工事費: 12回分割</option>
                       <option value="1">工事費: 一括払い</option>
@@ -734,14 +741,13 @@
                   
                   <div id="hKojiContainer_${lineId}" style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">${hKojiHtml}</div>
                   
-                  <div style="text-align:right; font-size:12px; color:#cc0000; font-weight:bold; margin-top:8px;">
+                  <div style="text-align:right; font-size:11px; color:#cc0000; font-weight:bold; margin-top:6px;">
                     ※工事費総額: <span class="koji-total-display">0</span>円
                   </div>
                 </div>
               </div>
-              <div class="section-footer">2ヶ月目以降 工事・端末 計: <span class="col-total-device price-text">0</span>円/月</div>
+              <div class="section-footer">工事・端末 計: <span class="col-total-device price-text">0</span>円/月</div>
             </div>
-
           </div>
 
           <div class="col-right">
@@ -749,8 +755,8 @@
               <div class="section-header">🎁 割引・キャンペーン</div>
               <div class="section-body">
                 <div class="form-group"><span class="form-label">キャンペーン・特典</span>${hCpHtml}</div>
-                <div class="monthly-support-notice" style="display:none; color:#c72a48; font-weight:bold; margin-top:20px; padding:12px; background:#fff0f5; border-radius:8px; border:1px solid #ffccd5; text-align:center;">
-                  ✅ 月々サポート適用: <br><span style="font-size:18px;">-<span class="ms-val">0</span>円/月</span>
+                <div class="monthly-support-notice" style="display:none; color:#c72a48; font-weight:bold; margin-top:16px; padding:10px; background:#fff0f5; border-radius:8px; border:1px solid #ffccd5; text-align:center;">
+                  ✅ 月々サポート適用: <br><span style="font-size:16px;">-<span class="ms-val">0</span>円/月</span>
                 </div>
               </div>
               <div class="section-footer">割引 計: <span style="color:#cc0000;">-<span class="col-total-discount price-text">0</span>円</span></div>
@@ -758,7 +764,7 @@
 
             <div class="section-card sticky-summary">
               <div class="section-header" style="background:#cc0000; color:#fff; border-bottom:none;">💰 この回線の月額目安</div>
-              <div class="section-body" style="text-align:center; padding: 24px;">
+              <div class="section-body" style="text-align:center; padding: 16px;">
                 <div style="font-size: 13px; color: #888; font-weight:bold;">2ヵ月目以降 (割引適用後)</div>
                 <div style="font-size: 38px; font-weight: 900; color: #cc0000; margin-top:8px; letter-spacing:-1px;">
                   <span class="line-final-total">0</span><span style="font-size: 18px; font-weight:bold;"> 円/月</span>
@@ -1064,7 +1070,6 @@
         const isHome5G = isHome5GDev || isHomePlanSelected;
         const is10G = planText.includes("10ギガ") || planText.includes("10G");
 
-        // ✨ 光電話バリューのチェック判定 ✨
         let isPhoneValue = false;
         block.querySelectorAll('.dyn-hopt').forEach(lbl => {
             if (lbl.innerText.includes("ドコモ光電話バリュー") && lbl.querySelector('input').checked) {
@@ -1094,10 +1099,8 @@
             let cb = lbl.querySelector('input');
             let txt = lbl.innerText;
             
-            // home 5Gで無効化するキーワード（電話系の付加サービスも含む）
             let isHikariOnly = txt.includes("光") || txt.includes("テレビ") || txt.includes("TV") || txt.includes("ひかり") || txt.includes("着信") || txt.includes("転送") || txt.includes("番号") || txt.includes("リクエスト") || txt.includes("ストップ") || txt.includes("チャンネル");
 
-            // ✨ バリューとの重複判定 ✨
             let isBundleDuplicate = false;
             if (isPhoneValue) {
                 if (txt.includes("ドコモ光電話") && !txt.includes("バリュー")) isBundleDuplicate = true;
