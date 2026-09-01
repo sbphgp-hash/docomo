@@ -13,7 +13,7 @@
     color: #333; overflow-x: hidden;
   }
 
-  /* 上部ナビゲーション（余白圧縮） */
+  /* 上部ナビゲーション */
   .top-nav {
     background: #ffffff; padding: 8px 16px;
     display: flex; justify-content: space-between; align-items: center;
@@ -31,7 +31,7 @@
   .btn-primary { background: #cc0000; color: #fff; border: none; }
   .btn-primary:hover:not(:disabled) { background: #aa0000; }
   
-  /* タブ（余白圧縮） */
+  /* タブ */
   .tab-bar-container { padding: 12px 16px 0 16px; max-width: 1400px; margin: 0 auto; }
   .tab-bar {
     display: inline-flex; background: #e4e6eb; padding: 4px; border-radius: 10px; gap: 4px;
@@ -45,17 +45,16 @@
   .tab-btn.active { background: #ffffff; color: #cc0000; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
   .tab-btn.active.fixed-tab { color: #118ab2; }
 
-  /* ✨ 3カラム横並びレイアウトへ大改修 ✨ */
+  /* 3カラム横並びレイアウト */
   .view-container { display: none; padding: 16px; max-width: 1400px; margin: 0 auto; }
   .view-active { display: block; }
   .two-columns { display: flex; gap: 16px; align-items: stretch; }
   
-  /* col-leftを横並び（row）にして2つのカードを分割 */
   .col-left { flex: 2.2; display: flex; flex-direction: row; gap: 16px; min-width: 0; }
   .col-left > .section-card { flex: 1; min-width: 0; } 
   .col-right { flex: 1; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 
-  /* カードデザイン（高さピッタリに調整） */
+  /* カードデザイン */
   .section-card {
     background: #ffffff; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.03);
     border: 1px solid #eaedf1; overflow: hidden;
@@ -80,7 +79,7 @@
   }
   .btn-delete-line:hover { background: #ffe6ea; }
 
-  /* フォーム要素（サイズ圧縮） */
+  /* フォーム要素 */
   .form-group { margin-bottom: 10px; }
   .form-group:last-child { margin-bottom: 0; }
   .form-label { display: block; font-size: 11px; color: #555; margin-bottom: 4px; font-weight: bold; }
@@ -90,7 +89,7 @@
   }
   select:focus, input[type="number"]:focus { border-color: #cc0000; outline: none; }
   
-  /* オプションのチェックボタン（密集化） */
+  /* オプションのチェックボタン */
   .check-label {
     display: flex; align-items: center; gap: 6px; font-size: 12px; margin-bottom: 6px;
     cursor: pointer; padding: 6px 10px; border-radius: 8px; border: 1px solid #eee; transition: all 0.2s;
@@ -178,7 +177,6 @@
   #emptyState { text-align: center; padding: 80px 20px; color: #888; }
   #emptyState h2 { margin-bottom: 12px; color: #333; font-size: 20px; }
 
-  /* 画面が小さい時（縦向きなど）は元の縦積みへ戻す安全装置 */
   @media (max-width: 900px) {
     .two-columns { flex-direction: column; }
     .col-left { flex-direction: column; width: 100%; }
@@ -1069,37 +1067,29 @@
         const isHomePlanSelected = planText.includes("home") || planText.includes("5G");
         const isHome5G = isHome5GDev || isHomePlanSelected;
         const is10G = planText.includes("10ギガ") || planText.includes("10G");
+        // 戸建プランかどうかの判定
+        const isKodate = planText.includes("戸建") || planText.includes("戸建て") || planText.includes("ファミリー");
+        // テレビオプションが契約可能なプランか判定（戸建 または 10ギガ）
+        const isTvAvailable = !isHome5G && (isKodate || is10G);
 
         let isPhoneValue = false;
+        let hasPhoneOpt = false;
+        let hasTvOpt = false;
+
+        // まず光電話バリューのチェック有無を確認
         block.querySelectorAll('.dyn-hopt').forEach(lbl => {
             if (lbl.innerText.includes("ドコモ光電話バリュー") && lbl.querySelector('input').checked) {
                 isPhoneValue = true;
             }
         });
 
-        const kojiPaySel = block.querySelector('.hKojiPaySelect');
-        if (kojiPaySel) {
-            kojiPaySel.disabled = isHome5G;
-            kojiPaySel.style.opacity = isHome5G ? "0.4" : "1";
-        }
-
-        block.querySelectorAll('.dyn-hkoji').forEach(lbl => {
-            let cb = lbl.querySelector('input');
-            if (isHome5G) {
-                cb.checked = false;
-                cb.disabled = true;
-                lbl.style.opacity = "0.4";
-            } else {
-                cb.disabled = false;
-                lbl.style.opacity = "1";
-            }
-        });
-
+        // 各オプションの有効/無効化制御
         block.querySelectorAll('.dyn-hopt').forEach(lbl => {
             let cb = lbl.querySelector('input');
             let txt = lbl.innerText;
             
             let isHikariOnly = txt.includes("光") || txt.includes("テレビ") || txt.includes("TV") || txt.includes("ひかり") || txt.includes("着信") || txt.includes("転送") || txt.includes("番号") || txt.includes("リクエスト") || txt.includes("ストップ") || txt.includes("チャンネル");
+            let isTvService = txt.includes("テレビ") || txt.includes("TV");
 
             let isBundleDuplicate = false;
             if (isPhoneValue) {
@@ -1112,11 +1102,55 @@
                 if (txt.includes("着信お知らせメール")) isBundleDuplicate = true;
             }
 
-            if (isHome5G && isHikariOnly) {
+            // テレビオプションは「戸建」または「10ギガ」以外は選択不可
+            if (isTvService && !isTvAvailable) {
+                cb.checked = false;
+                cb.disabled = true;
+                lbl.style.opacity = "0.4";
+            } else if (isHome5G && isHikariOnly) {
                 cb.checked = false;
                 cb.disabled = true;
                 lbl.style.opacity = "0.4";
             } else if (isBundleDuplicate) {
+                cb.checked = false;
+                cb.disabled = true;
+                lbl.style.opacity = "0.4";
+            } else {
+                cb.disabled = false;
+                lbl.style.opacity = "1";
+            }
+
+            // 電話系オプションまたはテレビ系オプションが選択されているか追跡
+            if (cb.checked) {
+                if (txt.includes("光電話") || txt.includes("光電話バリュー")) hasPhoneOpt = true;
+                if (isTvService) hasTvOpt = true;
+            }
+        });
+
+        // 工事費の有効/無効化制御
+        const kojiPaySel = block.querySelector('.hKojiPaySelect');
+        if (kojiPaySel) {
+            kojiPaySel.disabled = isHome5G;
+            kojiPaySel.style.opacity = isHome5G ? "0.4" : "1";
+        }
+
+        block.querySelectorAll('.dyn-hkoji').forEach(lbl => {
+            let cb = lbl.querySelector('input');
+            let txt = lbl.innerText;
+            let isPhoneKoji = txt.includes("電話");
+            let isTvKoji = txt.includes("テレビ") || txt.includes("TV");
+
+            if (isHome5G) {
+                cb.checked = false;
+                cb.disabled = true;
+                lbl.style.opacity = "0.4";
+            } else if (isPhoneKoji && !hasPhoneOpt) {
+                // 電話オプション非選択時は電話工事費を無効化
+                cb.checked = false;
+                cb.disabled = true;
+                lbl.style.opacity = "0.4";
+            } else if (isTvKoji && !hasTvOpt) {
+                // テレビオプション非選択時はテレビ工事費を無効化
                 cb.checked = false;
                 cb.disabled = true;
                 lbl.style.opacity = "0.4";
