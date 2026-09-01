@@ -1,4 +1,3 @@
-<!-- iPad最適化タグ -->
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="料金シミュ">
@@ -188,6 +187,7 @@
       <button id="addMobileBtn" class="btn" style="color:#cc0000; border-color:#cc0000;" onclick="safeAddLine('mobile')" disabled>⏳ 読込中...</button>
       <button id="addFixedBtn" class="btn" style="color:#118ab2; border-color:#118ab2;" onclick="safeAddLine('fixed')" disabled>⏳ 読込中...</button>
       <button class="btn" style="margin-left:8px;" onclick="copyLine()">📋 コピー追加</button>
+      <button class="btn" style="margin-left:8px; border-color:#28a745; color:#28a745;" onclick="forceFetchData()">⬇️ マスタ更新</button>
       <button class="btn" style="margin-left: 8px;" onclick="resetAll()">🔄 全クリア</button>
     </div>
     <div class="nav-buttons">
@@ -237,7 +237,6 @@
   </div>
 </div>
 
-<!-- 機種選択モーダル -->
 <div id="deviceModal" class="modal-overlay">
   <div class="modal-content">
     <div class="modal-header">
@@ -264,6 +263,13 @@
   window.openDeviceModal = openDeviceModal;
   window.closeDeviceModal = closeDeviceModal;
   window.selectDevice = selectDevice;
+  
+  window.forceFetchData = function() {
+      if(confirm("スプレッドシートの最新データを読み込みますか？")) {
+          localStorage.removeItem("docomo_sim_cache_v2");
+          location.reload();
+      }
+  };
 
   const DEVICE_CSV_URL   = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSxkg_tTd2f_kAcqtH7hXHPq5zbSm-fOHRh3T3ZNAho31pmmGxhhnbbFxqojwDz3j5sRQfB2EZrmMPr/pub?gid=0&single=true&output=csv"; 
   const PLAN_CSV_URL     = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSxkg_tTd2f_kAcqtH7hXHPq5zbSm-fOHRh3T3ZNAho31pmmGxhhnbbFxqojwDz3j5sRQfB2EZrmMPr/pub?gid=1240444955&single=true&output=csv"; 
@@ -333,13 +339,30 @@
 
   async function init() {
     try {
-      const fetchTxt = async (url) => { if(!url) return ""; try { return await (await fetch(url)).text(); } catch(e) { return ""; } };
+      const CACHE_KEY = "docomo_sim_cache_v2";
+      let texts = null;
+      
+      try {
+          let cached = localStorage.getItem(CACHE_KEY);
+          if (cached) {
+              let parsed = JSON.parse(cached);
+              if (Date.now() - parsed.time < 12 * 60 * 60 * 1000) {
+                  texts = parsed.data;
+              }
+          }
+      } catch(e) {}
 
-      const [tDev, tPlan, tOpt, tDisc, tHPlan, tHProv, tHOpt, tHDisc, tHDev, tHKoji] = await Promise.all([
-        fetchTxt(DEVICE_CSV_URL), fetchTxt(PLAN_CSV_URL), fetchTxt(OPTION_CSV_URL), fetchTxt(DISCOUNT_CSV_URL),
-        fetchTxt(H_PLAN_URL), fetchTxt(H_PROV_URL), fetchTxt(H_OPT_URL), fetchTxt(H_DISC_URL),
-        fetchTxt(H_DEV_URL), fetchTxt(H_KOJI_CSV_URL)
-      ]);
+      if (!texts) {
+          const fetchTxt = async (url) => { if(!url) return ""; try { return await (await fetch(url)).text(); } catch(e) { return ""; } };
+          texts = await Promise.all([
+            fetchTxt(DEVICE_CSV_URL), fetchTxt(PLAN_CSV_URL), fetchTxt(OPTION_CSV_URL), fetchTxt(DISCOUNT_CSV_URL),
+            fetchTxt(H_PLAN_URL), fetchTxt(H_PROV_URL), fetchTxt(H_OPT_URL), fetchTxt(H_DISC_URL),
+            fetchTxt(H_DEV_URL), fetchTxt(H_KOJI_CSV_URL)
+          ]);
+          try { localStorage.setItem(CACHE_KEY, JSON.stringify({ time: Date.now(), data: texts })); } catch(e) {}
+      }
+
+      const [tDev, tPlan, tOpt, tDisc, tHPlan, tHProv, tHOpt, tHDisc, tHDev, tHKoji] = texts;
 
       parseCSV(tDev).forEach(p => {
         let id = p.id || p.ID || `dev_${Math.random()}`;
@@ -375,7 +398,7 @@
         else if(type==="call") mCallHtml += `<option value="${id}" data-price="${price}">${name} (+${price}円)</option>`;
         else if(type==="hoshou") mHoshouHtml += `<option value="${id}" data-price="${price}">${name} (+${price}円)</option>`;
         else if(type==="other") mOtherHtml += `<label class="check-label dyn-other-opt" data-price="${price}"><input type="checkbox" onchange="calculate()"> ${name}</label>`;
-        else if(type==="special") mSpHtml += `<label class="check-label special-opt special-opt-${id}" data-price="${price}"><input type="checkbox" onchange="calculate()"> <span style="color:#cc0000; font-weight:bold;">${name}</span></label>`;
+        else if(type==="special") mSpHtml += `<label class="check-label special-opt" data-price="${price}"><input type="checkbox" onchange="calculate()"> <span style="color:#cc0000; font-weight:bold;">${name}</span></label>`;
       });
 
       parseCSV(tDisc).forEach(d => {
@@ -412,7 +435,7 @@
       parseCSV(tHDisc).forEach(d => {
         let id = d.id || d.ID || `hdisc_${Math.random()}`;
         let name = d.name || d.名前 || d.名称 || d.キャンペーン名 || id;
-        hDisc.push({id: id, name: name});
+        hDisc.push({id: id, name: name, price: getNum(d.price || d.割引額 || d.割引 || d.val || d.value || d.金額), duration: getNum(d.duration || d.期間 || d.times)});
         hCpHtml += `<label class="check-label hcamp-opt hcamp-opt-${id}"><input type="checkbox" onchange="calculate()"><span style="color:#cc0000; font-weight:bold;">${name}</span></label>`;
       });
 
@@ -677,6 +700,21 @@
         <div class="two-columns">
           <div class="col-left">
             <div class="section-card">
+              <div class="section-header">📄 ネット・プロバイダ</div>
+              <div class="section-body">
+                <div style="display:flex; gap:16px;">
+                  <div class="form-group" style="flex:1;"><span class="form-label">料金プラン</span><select class="hPlanSelect" onchange="updateHProv('${lineId}'); calculate();">${hPlanHtml}</select></div>
+                  <div class="form-group" style="flex:1;"><span class="form-label">プロバイダー</span><select class="hProvSelect" onchange="calculate()"><option value="none">不要 / 未選択</option></select></div>
+                </div>
+                <div class="form-group" style="border-top:1px dashed #eee; padding-top:16px; margin-top:8px;">
+                  <span class="form-label">オプション</span>
+                  <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">${hOptHtml}</div>
+                </div>
+              </div>
+              <div class="section-footer">ネット・OP 計: <span class="col-total-plan price-text">0</span>円</div>
+            </div>
+
+            <div class="section-card">
               <div class="section-header">🌐 工事・ルーター</div>
               <div class="section-body">
                 <div style="display:flex; gap:16px;">
@@ -696,7 +734,6 @@
                   
                   <div id="hKojiContainer_${lineId}" style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">${hKojiHtml}</div>
                   
-                  <!-- ✨ 工事費総額の表示 ✨ -->
                   <div style="text-align:right; font-size:12px; color:#cc0000; font-weight:bold; margin-top:8px;">
                     ※工事費総額: <span class="koji-total-display">0</span>円
                   </div>
@@ -705,20 +742,6 @@
               <div class="section-footer">2ヶ月目以降 工事・端末 計: <span class="col-total-device price-text">0</span>円/月</div>
             </div>
 
-            <div class="section-card">
-              <div class="section-header">📄 ネット・プロバイダ</div>
-              <div class="section-body">
-                <div style="display:flex; gap:16px;">
-                  <div class="form-group" style="flex:1;"><span class="form-label">料金プラン</span><select class="hPlanSelect" onchange="updateHProv('${lineId}'); calculate();">${hPlanHtml}</select></div>
-                  <div class="form-group" style="flex:1;"><span class="form-label">プロバイダー</span><select class="hProvSelect" onchange="calculate()"><option value="none">不要 / 未選択</option></select></div>
-                </div>
-                <div class="form-group" style="border-top:1px dashed #eee; padding-top:16px; margin-top:8px;">
-                  <span class="form-label">オプション</span>
-                  <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">${hOptHtml}</div>
-                </div>
-              </div>
-              <div class="section-footer">ネット・OP 計: <span class="col-total-plan price-text">0</span>円</div>
-            </div>
           </div>
 
           <div class="col-right">
@@ -968,6 +991,7 @@
           let cb=block.querySelector(`.camp-opt-${d.id} input`);
           if(cb&&cb.checked){ 
               let v=Number(pObj.raw[d.id+'_val'])||0; 
+              if(v===0 && d.price) v = d.price;
               if(v===0 && d.name.includes("U15") && pObj.name && pObj.name.includes("デビュー")) {
                   v = pObj.name.includes("20GB") ? 1870 : 1100; 
               }
@@ -984,6 +1008,7 @@
               let cb=block.querySelector(`.camp-opt-${d.id} input`); 
               if(cb&&cb.checked){ 
                   let v=Number(pObj.raw[d.id+'_val'])||0; 
+                  if(v===0 && d.price) v = d.price;
                   if(v===0 && d.name.includes("U15") && pObj.name && pObj.name.includes("デビュー")) {
                       v = pObj.name.includes("20GB") ? 1870 : 1100; 
                   }
@@ -1039,6 +1064,14 @@
         const isHome5G = isHome5GDev || isHomePlanSelected;
         const is10G = planText.includes("10ギガ") || planText.includes("10G");
 
+        // ✨ 光電話バリューのチェック判定 ✨
+        let isPhoneValue = false;
+        block.querySelectorAll('.dyn-hopt').forEach(lbl => {
+            if (lbl.innerText.includes("ドコモ光電話バリュー") && lbl.querySelector('input').checked) {
+                isPhoneValue = true;
+            }
+        });
+
         const kojiPaySel = block.querySelector('.hKojiPaySelect');
         if (kojiPaySel) {
             kojiPaySel.disabled = isHome5G;
@@ -1060,8 +1093,27 @@
         block.querySelectorAll('.dyn-hopt').forEach(lbl => {
             let cb = lbl.querySelector('input');
             let txt = lbl.innerText;
-            let isHikariOnly = txt.includes("光") || txt.includes("テレビ") || txt.includes("TV") || txt.includes("ひかり");
+            
+            // home 5Gで無効化するキーワード（電話系の付加サービスも含む）
+            let isHikariOnly = txt.includes("光") || txt.includes("テレビ") || txt.includes("TV") || txt.includes("ひかり") || txt.includes("着信") || txt.includes("転送") || txt.includes("番号") || txt.includes("リクエスト") || txt.includes("ストップ") || txt.includes("チャンネル");
+
+            // ✨ バリューとの重複判定 ✨
+            let isBundleDuplicate = false;
+            if (isPhoneValue) {
+                if (txt.includes("ドコモ光電話") && !txt.includes("バリュー")) isBundleDuplicate = true;
+                if (txt.includes("通話中着信")) isBundleDuplicate = true;
+                if (txt.includes("転送でんわ")) isBundleDuplicate = true;
+                if (txt.includes("発信者番号表示")) isBundleDuplicate = true;
+                if (txt.includes("ナンバー・リクエスト")) isBundleDuplicate = true;
+                if (txt.includes("迷惑電話ストップサービス")) isBundleDuplicate = true;
+                if (txt.includes("着信お知らせメール")) isBundleDuplicate = true;
+            }
+
             if (isHome5G && isHikariOnly) {
+                cb.checked = false;
+                cb.disabled = true;
+                lbl.style.opacity = "0.4";
+            } else if (isBundleDuplicate) {
                 cb.checked = false;
                 cb.disabled = true;
                 lbl.style.opacity = "0.4";
@@ -1118,12 +1170,12 @@
         const kojiPayMode = block.querySelector('.hKojiPaySelect')?.value || "24";
         let kFeeM2 = 0;
         let monthKojiArr = new Array(48).fill(0);
-        let kojiTotalSum = 0; // ★ 追加: 工事費の総額を計算
+        let kojiTotalSum = 0; 
 
         block.querySelectorAll('.dyn-hkoji input:checked').forEach(cb => {
             const lbl = cb.closest('.check-label');
             let total = Number(lbl.getAttribute("data-total")) || 0;
-            kojiTotalSum += total; // ★ 追加: 総額に足す
+            kojiTotalSum += total; 
             
             let m1 = 0, m2 = 0, times = 1;
 
@@ -1147,7 +1199,6 @@
             }
         });
 
-        // ★ 追加: 画面に工事費総額を表示
         if(block.querySelector('.koji-total-display')) {
             block.querySelector('.koji-total-display').innerText = kojiTotalSum.toLocaleString();
         }
