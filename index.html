@@ -235,7 +235,6 @@
       <button class="btn btn-primary no-print" onclick="window.print()">🖨️ 見積印刷</button>
     </div>
     
-    <!-- ★グラフ表示対象を選択する専用UI -->
     <div class="no-print" style="background: #f8f9fa; padding: 12px 16px; border-radius: 12px; border: 1px solid #eee; margin-bottom: 16px;">
       <div style="font-size: 12px; font-weight: bold; color: #555; margin-bottom: 8px;">📊 グラフ・表に表示する回線を選択：</div>
       <div id="graph-line-selectors" style="display: flex; gap: 8px; flex-wrap: wrap;"></div>
@@ -329,9 +328,12 @@
   window.openKojiModal = openKojiModal;
   window.closeKojiModal = closeKojiModal;
   
+  // ★ バージョンを更新して、必ず新しいデータを読み込み直すように設定
+  const CACHE_KEY_NEW = "docomo_sim_cache_v5";
+
   window.forceFetchData = function() {
       if(confirm("スプレッドシートの最新データを読み込みますか？")) {
-          localStorage.removeItem("docomo_sim_cache_v2");
+          localStorage.removeItem(CACHE_KEY_NEW);
           location.reload();
       }
   };
@@ -362,7 +364,11 @@
   let editingOptLineId = null; 
   let editingKojiLineId = null; 
 
-  // ★ グラフに表示する回線を管理
+  // ★ 事務手数料のデフォルト値（スプレッドシートに指定がない場合はこれを使用）
+  let mobileAdminFee = 3850;
+  let fixedAdminFee = 3300;
+
+  // グラフに表示する回線を管理
   let lineGraphData = {};
   let graphSelectedLines = new Set();
 
@@ -375,8 +381,14 @@
 
   function parseCSV(text) {
     if (!text) return [];
-    text = text.replace(/^\uFEFF/, ''); 
-    const lines = text.trim().split('\n').filter(l => l && !l.match(/^\|?[\s:-]+\|?$/));
+    text = text.replace(/^\uFEFF/, '').trim();
+    
+    // HTMLのログイン画面やエラーコードが返ってきた場合は絶対に無視して安全に保護する
+    if (text.toLowerCase().startsWith('<!doctype') || text.toLowerCase().startsWith('<html')) {
+        return [];
+    }
+    
+    const lines = text.split('\n').filter(l => l && !l.match(/^\|?[\s:-]+\|?$/));
     if (lines.length < 2) return [];
 
     let delimiter = ',';
@@ -412,11 +424,10 @@
 
   async function init() {
     try {
-      const CACHE_KEY = "docomo_sim_cache_v2";
       let texts = null;
       
       try {
-          let cached = localStorage.getItem(CACHE_KEY);
+          let cached = localStorage.getItem(CACHE_KEY_NEW);
           if (cached) {
               let parsed = JSON.parse(cached);
               if (Date.now() - parsed.time < 12 * 60 * 60 * 1000) {
@@ -426,13 +437,25 @@
       } catch(e) {}
 
       if (!texts) {
-          const fetchTxt = async (url) => { if(!url) return ""; try { return await (await fetch(url)).text(); } catch(e) { return ""; } };
+          const fetchTxt = async (url) => { 
+              if(!url) return ""; 
+              try { 
+                  let res = await fetch(url);
+                  let text = await res.text();
+                  if (text.trim().toLowerCase().startsWith('<!doctype') || text.trim().toLowerCase().startsWith('<html')) return "";
+                  return text;
+              } catch(e) { return ""; } 
+          };
+          
           texts = await Promise.all([
             fetchTxt(DEVICE_CSV_URL), fetchTxt(PLAN_CSV_URL), fetchTxt(OPTION_CSV_URL), fetchTxt(DISCOUNT_CSV_URL),
             fetchTxt(H_PLAN_URL), fetchTxt(H_PROV_URL), fetchTxt(H_OPT_URL), fetchTxt(H_DISC_URL),
             fetchTxt(H_DEV_URL), fetchTxt(H_KOJI_CSV_URL)
           ]);
-          try { localStorage.setItem(CACHE_KEY, JSON.stringify({ time: Date.now(), data: texts })); } catch(e) {}
+          
+          if (texts.every(t => t.length > 0)) {
+              try { localStorage.setItem(CACHE_KEY_NEW, JSON.stringify({ time: Date.now(), data: texts })); } catch(e) {}
+          }
       }
 
       const [tDev, tPlan, tOpt, tDisc, tHPlan, tHProv, tHOpt, tHDisc, tHDev, tHKoji] = texts;
@@ -462,12 +485,17 @@
         mPlanHtml += `<option value="${id}">${name} : ${price.toLocaleString()}円</option>`;
       });
 
+      // ★ スマホのオプション処理 (事務手数料の取得処理を追加)
       parseCSV(tOpt).forEach(o => {
         let id = o.id || o.ID || `opt_${Math.random()}`;
         let name = o.name || o.名前 || o.名称 || id;
         let price = getNum(o.price || o.料金);
         let type = o.type || o.タイプ || "other";
-        if(type==="mandatory") mandatoryFeeTotal += price;
+        
+        if(type === "admin_fee") {
+            mobileAdminFee = price; // スマホ事務手数料の抽出
+        }
+        else if(type==="mandatory") mandatoryFeeTotal += price;
         else if(type==="call") mCallHtml += `<option value="${id}" data-price="${price}">${name} (+${price}円)</option>`;
         else if(type==="hoshou") mHoshouHtml += `<option value="${id}" data-price="${price}">${name} (+${price}円)</option>`;
         else if(type==="other") mOtherHtml += `<label class="check-label dyn-other-opt" data-price="${price}"><input type="checkbox" onchange="calculate()"> ${name}</label>`;
@@ -497,12 +525,19 @@
         hProv.push({id: id, name: name, prov_type: pType});
       });
 
+      // ★ 光のオプション処理 (事務手数料の取得処理を追加)
       parseCSV(tHOpt).forEach(o => {
         let id = o.id || o.ID || `hopt_${Math.random()}`;
         let name = o.name || o.名前 || o.名称 || id;
         let price = getNum(o.price || o.料金);
-        hOpt.push({id: id, name: name, price: price});
-        hOptHtml += `<label class="check-label dyn-hopt" data-price="${price}"><input type="checkbox" onchange="calculate()"> ${name} (+${price}円)</label>`;
+        let type = o.type || o.タイプ || "other";
+        
+        if(type === "admin_fee") {
+            fixedAdminFee = price; // 光の事務手数料の抽出
+        } else {
+            hOpt.push({id: id, name: name, price: price});
+            hOptHtml += `<label class="check-label dyn-hopt" data-price="${price}"><input type="checkbox" onchange="calculate()"> ${name} (+${price}円)</label>`;
+        }
       });
 
       parseCSV(tHDisc).forEach(d => {
@@ -850,7 +885,6 @@
     }
   }
 
-  // ★ グラフに表示する回線のチェックボタンを生成する関数
   function renderGraphToggles() {
     const gContainer = document.getElementById('graph-line-selectors');
     if (!gContainer) return;
@@ -861,7 +895,6 @@
 
     let allSelected = Array.from(lines).every(l => graphSelectedLines.has(l.id));
 
-    // 全回線ボタン
     const allBtn = document.createElement('div');
     allBtn.className = `graph-toggle-btn ${allSelected ? 'active' : ''}`;
     allBtn.innerText = allSelected ? '☑ 全回線' : '☐ 全回線';
@@ -876,7 +909,6 @@
     };
     gContainer.appendChild(allBtn);
 
-    // 各回線ボタン
     lines.forEach((line, index) => {
       const isFixed = line.getAttribute("data-type") === "fixed";
       const title = isFixed ? `🌐 ${index + 1}回線目` : `📱 ${index + 1}回線目`;
@@ -1139,7 +1171,6 @@
     document.getElementById('linesContainer').appendChild(div);
     activeLineId = lineId;
     
-    // ★ 追加された回線は自動的にグラフ表示対象にする
     graphSelectedLines.add(lineId);
 
     if(type==='fixed') updateHProv(lineId);
@@ -1194,7 +1225,6 @@
     let el = document.getElementById(id);
     if(el) el.remove();
     
-    // ★ グラフ表示データからも削除
     graphSelectedLines.delete(id);
     delete lineGraphData[id];
 
@@ -1211,7 +1241,6 @@
     document.getElementById("linesContainer").innerHTML = "";
     lineCounter = 0; activeLineId = null;
     
-    // ★ グラフ表示データもクリア
     graphSelectedLines.clear();
     lineGraphData = {};
     
@@ -1229,7 +1258,6 @@
     });
   }
 
-  // ★ グラフ表示を専用で更新する関数
   function updateGraph() {
     let arrP = new Array(48).fill(0);
     let arrD = new Array(48).fill(0);
@@ -1270,11 +1298,13 @@
 
     blocks.forEach((block, index) => {
       const type = block.getAttribute("data-type");
-      let lM2 = 0; let lineAdminFee = 4950; 
+      let lM2 = 0; 
       
-      // ★ この回線の推移データを一時保存する配列
       let lineArrP = new Array(48).fill(0);
       let lineArrD = new Array(48).fill(0);
+
+      // ★ スマホの事務手数料を計算にセット
+      let lineAdminFee = type === 'mobile' ? mobileAdminFee : fixedAdminFee;
 
       if (type === 'mobile') {
         const ct = block.querySelector('.contractTypeSelect')?.value || "kisyu";
@@ -1439,7 +1469,6 @@
           if(m===2){ lM2 = pFinal+dv; grandM2 += lM2; }
         }
         
-        // ★ 回線ごとの推移をデータ保存
         lineGraphData[block.id] = { p: lineArrP, d: lineArrD, aFee: lineAdminFee };
 
         if(block.querySelector('.line-final-total')) block.querySelector('.line-final-total').innerText = lM2.toLocaleString();
@@ -1452,7 +1481,6 @@
         const planSel = block.querySelector('.hPlanSelect');
         const selDevName = (devSel && devSel.value!=="none"&&hDev[devSel.value]) ? hDev[devSel.value].name : "";
         const isHome5GDev = devSel && (devSel.value.includes("home") || devSel.value.includes("hr") || selDevName.includes("home") || selDevName.includes("HR"));
-        let aFee = 3300; lineAdminFee = aFee; 
 
         let planText = "";
         if(planSel){
@@ -1725,7 +1753,6 @@
            if(m===2){ lM2 = pFinal+dv; grandM2 += lM2; }
         }
         
-        // ★ 回線ごとの推移をデータ保存
         lineGraphData[block.id] = { p: lineArrP, d: lineArrD, aFee: lineAdminFee };
 
         if(block.querySelector('.line-final-total')) block.querySelector('.line-final-total').innerText = lM2.toLocaleString();
@@ -1740,7 +1767,6 @@
     let displayPrice = currentDisplayMode === 'all' ? grandM2 : singleActiveM2;
     if(document.getElementById("grandTotalDisplay")) document.getElementById("grandTotalDisplay").innerText = displayPrice.toLocaleString();
 
-    // ★ グラフ側も連動して更新
     updateGraph();
   }
 
