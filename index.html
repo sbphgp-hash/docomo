@@ -38,12 +38,24 @@
     overflow-x: auto; max-width: 100%;
   }
   .tab-btn {
-    padding: 8px 20px; background: transparent; border: none;
+    padding: 8px 16px; background: transparent; border: none;
     border-radius: 8px; cursor: pointer; font-weight: bold; color: #666; font-size: 13px;
     transition: all 0.2s ease; white-space: nowrap;
+    display: inline-flex; align-items: center;
   }
   .tab-btn.active { background: #ffffff; color: #cc0000; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
   .tab-btn.active.fixed-tab { color: #118ab2; }
+  
+  /* タブ内の削除ボタン(バツマーク) */
+  .tab-close-btn {
+    display: inline-flex; justify-content: center; align-items: center;
+    width: 20px; height: 20px; border-radius: 50%;
+    margin-left: 8px; font-size: 11px; color: #888;
+    background: rgba(0,0,0,0.06); transition: all 0.2s;
+  }
+  .tab-close-btn:hover {
+    background: rgba(204,0,0,0.15); color: #cc0000;
+  }
 
   /* 3カラム横並びレイアウト */
   .view-container { display: none; padding: 16px; max-width: 1400px; margin: 0 auto; }
@@ -296,7 +308,6 @@
   window.switchTab = switchTab;
   window.updateHProv = updateHProv;
   
-  // モーダル操作関数をグローバルに登録
   window.openDeviceModal = openDeviceModal;
   window.closeDeviceModal = closeDeviceModal;
   window.selectDevice = selectDevice;
@@ -336,7 +347,7 @@
   let editingDeviceLineId = null; 
   let editingDeviceType = 'mobile'; 
   let editingOptLineId = null; 
-  let editingKojiLineId = null; // ★光工事費編集用のID管理
+  let editingKojiLineId = null; 
 
   let mPlanHtml = `<option value="none">未選択</option>`;
   let mCallHtml = `<option value="none">未加入 (0円)</option>`, mHoshouHtml = `<option value="none">未加入 (0円)</option>`;
@@ -516,7 +527,6 @@
     } catch (e) { console.error(e); alert("読み込みエラーが発生しました。"); }
   }
 
-  // --- 機種・ルーター選択用モーダル ---
   function openDeviceModal(lineId, type = 'mobile') {
     editingDeviceLineId = lineId;
     editingDeviceType = type;
@@ -627,7 +637,6 @@
     calculate();
   }
 
-  // --- 光オプション専用モーダル ---
   function openFixedOptModal(lineId) {
       editingOptLineId = lineId;
       const block = document.getElementById(lineId);
@@ -711,7 +720,6 @@
       });
   }
 
-  // --- 光工事費専用モーダル ---
   function openKojiModal(lineId) {
       editingKojiLineId = lineId;
       const block = document.getElementById(lineId);
@@ -804,7 +812,6 @@
       });
   }
 
-  // --- メイン処理 ---
   function safeAddLine(type) { try { addLine(type); } catch(e) { console.error("Line Add Error:", e); } }
 
   function setDisplayMode(mode) {
@@ -823,6 +830,7 @@
     if(viewId === 'graph') calculate();
   }
 
+  // ★変更点：タブ内に削除用バツマーク（✕）を生成
   function renderTabs() {
     const tabBar = document.getElementById('tabBar');
     const tabBarContainer = document.getElementById('tabBarContainer');
@@ -839,8 +847,22 @@
         const isFixed = line.getAttribute("data-type") === "fixed";
         const btn = document.createElement('button');
         btn.className = `tab-btn ${line.id === activeLineId ? 'active' : ''} ${isFixed ? 'fixed-tab' : ''}`;
-        btn.innerText = isFixed ? `🌐 ${index + 1}回線目(光/5G)` : `📱 ${index + 1}回線目(スマホ)`;
+        
+        const titleSpan = document.createElement('span');
+        titleSpan.innerText = isFixed ? `🌐 ${index + 1}回線目(光/5G)` : `📱 ${index + 1}回線目(スマホ)`;
+        
+        const closeBtn = document.createElement('span');
+        closeBtn.innerHTML = '✕';
+        closeBtn.className = 'tab-close-btn';
+        closeBtn.onclick = (e) => {
+          e.stopPropagation(); // これを書くことでタブ切り替えイベントを防ぎ、削除だけ実行させます
+          removeLine(line.id);
+        };
+        
         btn.onclick = () => switchTab(line.id);
+        
+        btn.appendChild(titleSpan);
+        btn.appendChild(closeBtn);
         tabBar.appendChild(btn);
       });
     }
@@ -968,13 +990,9 @@
                   <div class="form-group" style="flex:1;"><span class="form-label">プロバイダー</span><select class="hProvSelect" onchange="calculate()"><option value="none">不要 / 未選択</option></select></div>
                 </div>
                 
-                <!-- 光オプション用UI -->
                 <div class="form-group" style="border-top:1px dashed #eee; padding-top:8px; margin-top:8px;">
                   <span class="form-label">オプション</span>
-                  
-                  <!-- 実際の計算用チェックボックスは非表示で保持 -->
                   <div style="display:none;" class="hidden-hopt-container">${hOptHtml}</div>
-                  
                   <div style="display:flex; justify-content:space-between; align-items:center; border:2px solid #cc0000; border-radius:8px; padding:8px 12px; background:#fff;">
                     <span class="displayHOptText" style="font-weight:900; font-size:14px; color:#333;">選択なし</span>
                     <button class="btn btn-primary" onclick="openFixedOptModal('${lineId}')" style="padding:6px 12px;">変更</button>
@@ -1010,7 +1028,6 @@
                     </select>
                   </div>
                   
-                  <!-- 光工事費用UI (モーダル対応) -->
                   <div style="display:none;" class="hidden-hkoji-container">${hKojiHtml}</div>
                   
                   <div style="display:flex; justify-content:space-between; align-items:center; border:2px solid #cc0000; border-radius:8px; padding:8px 12px; background:#fff;">
@@ -1364,7 +1381,6 @@
             }
         });
 
-        // 各オプションの有効/無効化制御
         block.querySelectorAll('.dyn-hopt').forEach(lbl => {
             let cb = lbl.querySelector('input');
             let txt = lbl.innerText;
@@ -1406,7 +1422,6 @@
             }
         });
 
-        // 光オプションの選択数をUIに反映
         let optCheckedCount = 0;
         let optTotal = 0;
         block.querySelectorAll('.dyn-hopt input:checked').forEach(cb => {
@@ -1456,7 +1471,6 @@
             }
         });
 
-        // ★追加：光工事費の選択数をUIに反映、モーダルが開いていれば更新
         if (editingKojiLineId === block.id) {
             updateKojiModalUI();
         }
