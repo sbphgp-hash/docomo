@@ -328,8 +328,8 @@
   window.openKojiModal = openKojiModal;
   window.closeKojiModal = closeKojiModal;
   
-  // ★ バージョンを更新して、必ず新しいデータを読み込み直すように設定
-  const CACHE_KEY_NEW = "docomo_sim_cache_v5";
+  // ★ バージョンを「v7」に変更してキャッシュをリセット
+  const CACHE_KEY_NEW = "docomo_sim_cache_v7";
 
   window.forceFetchData = function() {
       if(confirm("スプレッドシートの最新データを読み込みますか？")) {
@@ -364,11 +364,9 @@
   let editingOptLineId = null; 
   let editingKojiLineId = null; 
 
-  // ★ 事務手数料のデフォルト値（スプレッドシートに指定がない場合はこれを使用）
   let mobileAdminFee = 3850;
   let fixedAdminFee = 3300;
 
-  // グラフに表示する回線を管理
   let lineGraphData = {};
   let graphSelectedLines = new Set();
 
@@ -383,7 +381,6 @@
     if (!text) return [];
     text = text.replace(/^\uFEFF/, '').trim();
     
-    // HTMLのログイン画面やエラーコードが返ってきた場合は絶対に無視して安全に保護する
     if (text.toLowerCase().startsWith('<!doctype') || text.toLowerCase().startsWith('<html')) {
         return [];
     }
@@ -437,24 +434,47 @@
       } catch(e) {}
 
       if (!texts) {
+          // ★ 変更点：Googleに負荷をかけないように、かつタイムアウトでフリーズを防止
           const fetchTxt = async (url) => { 
               if(!url) return ""; 
               try { 
-                  let res = await fetch(url);
+                  // 10秒でタイムアウトさせる設定
+                  const controller = new AbortController();
+                  const timeoutId = setTimeout(() => controller.abort(), 10000);
+                  
+                  let res = await fetch(url, { signal: controller.signal });
+                  clearTimeout(timeoutId);
+                  
                   let text = await res.text();
                   if (text.trim().toLowerCase().startsWith('<!doctype') || text.trim().toLowerCase().startsWith('<html')) return "";
                   return text;
               } catch(e) { return ""; } 
           };
           
-          texts = await Promise.all([
-            fetchTxt(DEVICE_CSV_URL), fetchTxt(PLAN_CSV_URL), fetchTxt(OPTION_CSV_URL), fetchTxt(DISCOUNT_CSV_URL),
-            fetchTxt(H_PLAN_URL), fetchTxt(H_PROV_URL), fetchTxt(H_OPT_URL), fetchTxt(H_DISC_URL),
-            fetchTxt(H_DEV_URL), fetchTxt(H_KOJI_CSV_URL)
-          ]);
+          const urls = [
+            DEVICE_CSV_URL, PLAN_CSV_URL, OPTION_CSV_URL, DISCOUNT_CSV_URL,
+            H_PLAN_URL, H_PROV_URL, H_OPT_URL, H_DISC_URL, H_DEV_URL, H_KOJI_CSV_URL
+          ];
+          
+          texts = [];
+          let mBtn = document.getElementById('addMobileBtn');
+          let fBtn = document.getElementById('addFixedBtn');
+
+          // ★ 変更点：10個同時にリクエストせず、3個ずつ順番にリクエストする（詰まり解消）
+          for (let i = 0; i < urls.length; i += 3) {
+              // ボタンの文字を進捗状況に変更
+              mBtn.innerHTML = `⏳ 読込中... (${i}/${urls.length})`;
+              fBtn.innerHTML = `⏳ 読込中... (${i}/${urls.length})`;
+              
+              const chunk = urls.slice(i, i + 3);
+              const results = await Promise.all(chunk.map(url => fetchTxt(url)));
+              texts.push(...results);
+          }
           
           if (texts.every(t => t.length > 0)) {
               try { localStorage.setItem(CACHE_KEY_NEW, JSON.stringify({ time: Date.now(), data: texts })); } catch(e) {}
+          } else {
+              alert("通信が不安定なため、データの読み込みに一部失敗しました。\n画面右上の「⬇️ 更新」ボタンを何度かお試しください。");
           }
       }
 
@@ -485,15 +505,14 @@
         mPlanHtml += `<option value="${id}">${name} : ${price.toLocaleString()}円</option>`;
       });
 
-      // ★ スマホのオプション処理 (事務手数料の取得処理を追加)
       parseCSV(tOpt).forEach(o => {
         let id = o.id || o.ID || `opt_${Math.random()}`;
         let name = o.name || o.名前 || o.名称 || id;
         let price = getNum(o.price || o.料金);
         let type = o.type || o.タイプ || "other";
         
-        if(type === "admin_fee") {
-            mobileAdminFee = price; // スマホ事務手数料の抽出
+        if (type === "admin_fee" || type === "admin_free" || name.includes("事務手数料")) {
+            mobileAdminFee = price;
         }
         else if(type==="mandatory") mandatoryFeeTotal += price;
         else if(type==="call") mCallHtml += `<option value="${id}" data-price="${price}">${name} (+${price}円)</option>`;
@@ -525,15 +544,14 @@
         hProv.push({id: id, name: name, prov_type: pType});
       });
 
-      // ★ 光のオプション処理 (事務手数料の取得処理を追加)
       parseCSV(tHOpt).forEach(o => {
         let id = o.id || o.ID || `hopt_${Math.random()}`;
         let name = o.name || o.名前 || o.名称 || id;
         let price = getNum(o.price || o.料金);
         let type = o.type || o.タイプ || "other";
         
-        if(type === "admin_fee") {
-            fixedAdminFee = price; // 光の事務手数料の抽出
+        if(type === "admin_fee" || type === "admin_free" || name.includes("事務手数料")) {
+            fixedAdminFee = price;
         } else {
             hOpt.push({id: id, name: name, price: price});
             hOptHtml += `<label class="check-label dyn-hopt" data-price="${price}"><input type="checkbox" onchange="calculate()"> ${name} (+${price}円)</label>`;
@@ -550,8 +568,10 @@
       parseCSV(tHDev).forEach(d => {
         let id = d.id || d.ID || `hdev_${Math.random()}`;
         let name = d.name || d.名前 || d.名称 || d.機器名 || id;
+        if (name === id && !d.price_total && !d.総額 && !d.金額 && !d.価格) return;
+
         hDev[id] = {
-          name: name, price_total: getNum(d.price_total||d.総額),
+          name: name, price_total: getNum(d.price_total||d.総額||d.価格||d.金額||d.本体価格),
           d12_1: getNum(d.div12_m1||d.d12_1), d12_2: getNum(d.div12_m2||d.d12_2),
           d24_1: getNum(d.div24_m1||d.d24_1), d24_2: getNum(d.div24_m2||d.d24_2),
           d36_1: getNum(d.div36_m1||d.d36_1), d36_2: getNum(d.div36_m2||d.d36_2),
@@ -563,8 +583,10 @@
 
       parseCSV(tHKoji).forEach(k => {
         let id = k.id || k.ID || `hkoji_${Math.random()}`;
-        let name = k.name || k.名前 || k.名称 || k.工事名 || id;
-        let total = getNum(k.price_total || k.総額);
+        let name = k.name || k.名前 || k.名称 || k.工事名 || k.費用名 || id;
+        if (name === id && !k.price_total && !k.総額 && !k.金額) return;
+
+        let total = getNum(k.price_total || k.総額 || k.料金 || k.金額);
         let d12m1 = getNum(k.d12_m1), d12m2 = getNum(k.d12_m2);
         let d24m1 = getNum(k.d24_m1), d24m2 = getNum(k.d24_m2);
         hKojiHtml += `<label class="check-label dyn-hkoji" data-total="${total}" data-d12m1="${d12m1}" data-d12m2="${d12m2}" data-d24m1="${d24m1}" data-d24m2="${d24m2}"><input type="checkbox" onchange="calculate()"> ${name}</label>`;
@@ -586,6 +608,8 @@
     
     const sidebar = document.getElementById('modalSidebar');
     sidebar.innerHTML = '';
+    const grid = document.getElementById('modalGrid');
+    grid.innerHTML = '';
     
     const noneBtn = document.createElement('button');
     noneBtn.className = 'm-cat-btn';
@@ -1303,7 +1327,6 @@
       let lineArrP = new Array(48).fill(0);
       let lineArrD = new Array(48).fill(0);
 
-      // ★ スマホの事務手数料を計算にセット
       let lineAdminFee = type === 'mobile' ? mobileAdminFee : fixedAdminFee;
 
       if (type === 'mobile') {
