@@ -53,9 +53,7 @@
     margin-left: 8px; font-size: 11px; color: #888;
     background: rgba(0,0,0,0.06); transition: all 0.2s;
   }
-  .tab-close-btn:hover {
-    background: rgba(204,0,0,0.15); color: #cc0000;
-  }
+  .tab-close-btn:hover { background: rgba(204,0,0,0.15); color: #cc0000; }
 
   /* 3カラム横並びレイアウト */
   .view-container { display: none; padding: 16px; max-width: 1400px; margin: 0 auto; }
@@ -101,7 +99,6 @@
   }
   select:focus, input[type="number"]:focus { border-color: #cc0000; outline: none; }
   
-  /* オプションのチェックボタン */
   .check-label {
     display: flex; align-items: center; gap: 6px; font-size: 12px; margin-bottom: 6px;
     cursor: pointer; padding: 6px 10px; border-radius: 8px; border: 1px solid #eee; transition: all 0.2s;
@@ -145,7 +142,7 @@
   }
   .mode-btn.active { background: #cc0000; color: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
 
-  /* 機種/オプション選択モーダル共通 */
+  /* モーダル共通 */
   .modal-overlay {
     position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6);
     z-index: 2000; display: none; justify-content: center; align-items: center;
@@ -238,8 +235,11 @@
       <button class="btn btn-primary no-print" onclick="window.print()">🖨️ 見積印刷</button>
     </div>
     
-    <!-- グラフ選択用セレクター -->
-    <div id="graph-line-selectors" class="no-print" style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px;"></div>
+    <!-- ★グラフ表示対象を選択する専用UI -->
+    <div class="no-print" style="background: #f8f9fa; padding: 12px 16px; border-radius: 12px; border: 1px solid #eee; margin-bottom: 16px;">
+      <div style="font-size: 12px; font-weight: bold; color: #555; margin-bottom: 8px;">📊 グラフ・表に表示する回線を選択：</div>
+      <div id="graph-line-selectors" style="display: flex; gap: 8px; flex-wrap: wrap;"></div>
+    </div>
 
     <div style="background: #fff; padding: 16px; border-radius: 12px; border: 1px solid #ddd; height: 350px;">
       <canvas id="costChart"></canvas>
@@ -362,7 +362,7 @@
   let editingOptLineId = null; 
   let editingKojiLineId = null; 
 
-  // ★ グラフに表示する回線を管理・保持する変数
+  // ★ グラフに表示する回線を管理
   let lineGraphData = {};
   let graphSelectedLines = new Set();
 
@@ -844,7 +844,55 @@
     document.getElementById(viewId + '-view').classList.add('view-active');
     document.querySelectorAll('.top-nav .btn').forEach(btn => btn.classList.remove('btn-primary'));
     document.getElementById('btn-' + viewId).classList.add('btn-primary');
-    if(viewId === 'graph') calculate();
+    if(viewId === 'graph') {
+        renderGraphToggles();
+        updateGraph();
+    }
+  }
+
+  // ★ グラフに表示する回線のチェックボタンを生成する関数
+  function renderGraphToggles() {
+    const gContainer = document.getElementById('graph-line-selectors');
+    if (!gContainer) return;
+    
+    gContainer.innerHTML = '';
+    const lines = document.querySelectorAll('.line-container');
+    if (lines.length === 0) return;
+
+    let allSelected = Array.from(lines).every(l => graphSelectedLines.has(l.id));
+
+    // 全回線ボタン
+    const allBtn = document.createElement('div');
+    allBtn.className = `graph-toggle-btn ${allSelected ? 'active' : ''}`;
+    allBtn.innerText = allSelected ? '☑ 全回線' : '☐ 全回線';
+    allBtn.onclick = () => {
+      if (allSelected) {
+        graphSelectedLines.clear();
+      } else {
+        lines.forEach(l => graphSelectedLines.add(l.id));
+      }
+      renderGraphToggles();
+      updateGraph();
+    };
+    gContainer.appendChild(allBtn);
+
+    // 各回線ボタン
+    lines.forEach((line, index) => {
+      const isFixed = line.getAttribute("data-type") === "fixed";
+      const title = isFixed ? `🌐 ${index + 1}回線目` : `📱 ${index + 1}回線目`;
+      const isChecked = graphSelectedLines.has(line.id);
+      
+      const btn = document.createElement('div');
+      btn.className = `graph-toggle-btn ${isChecked ? 'active' : ''}`;
+      btn.innerText = (isChecked ? '☑ ' : '☐ ') + title;
+      btn.onclick = () => {
+        if(graphSelectedLines.has(line.id)) graphSelectedLines.delete(line.id);
+        else graphSelectedLines.add(line.id);
+        renderGraphToggles();
+        updateGraph();
+      };
+      gContainer.appendChild(btn);
+    });
   }
 
   function renderTabs() {
@@ -864,7 +912,6 @@
         const btn = document.createElement('button');
         btn.className = `tab-btn ${line.id === activeLineId ? 'active' : ''} ${isFixed ? 'fixed-tab' : ''}`;
         
-        // ★ タブのテキスト部分と削除ボタン（✕）を生成
         const titleSpan = document.createElement('span');
         titleSpan.innerText = isFixed ? `🌐 ${index + 1}回線目(光/5G)` : `📱 ${index + 1}回線目(スマホ)`;
         
@@ -873,7 +920,7 @@
         closeBtn.className = 'tab-close-btn';
         closeBtn.title = "この回線を削除";
         closeBtn.onclick = (e) => {
-          e.stopPropagation(); // タブ切り替えのイベントを発火させず削除だけ実行
+          e.stopPropagation(); 
           removeLine(line.id);
         };
         
@@ -883,45 +930,7 @@
         tabBar.appendChild(btn);
       });
     }
-
-    // ★ グラフ画面のチェックボタンUIを更新
-    const gContainer = document.getElementById('graph-line-selectors');
-    if (gContainer) {
-      gContainer.innerHTML = '';
-      if (lines.length > 0) {
-        let allSelected = Array.from(lines).every(l => graphSelectedLines.has(l.id));
-        
-        const allBtn = document.createElement('div');
-        allBtn.className = `graph-toggle-btn ${allSelected ? 'active' : ''}`;
-        allBtn.innerText = allSelected ? '☑ 全回線を選択' : '☐ 全回線を選択';
-        allBtn.onclick = () => {
-          if (allSelected) {
-            graphSelectedLines.clear();
-          } else {
-            lines.forEach(l => graphSelectedLines.add(l.id));
-          }
-          renderTabs();
-          updateGraph();
-        };
-        gContainer.appendChild(allBtn);
-
-        lines.forEach((line, index) => {
-          const isFixed = line.getAttribute("data-type") === "fixed";
-          const title = isFixed ? `🌐 ${index + 1}回線目` : `📱 ${index + 1}回線目`;
-          const btn = document.createElement('div');
-          const isChecked = graphSelectedLines.has(line.id);
-          btn.className = `graph-toggle-btn ${isChecked ? 'active' : ''}`;
-          btn.innerText = (isChecked ? '☑ ' : '☐ ') + title;
-          btn.onclick = () => {
-            if(graphSelectedLines.has(line.id)) graphSelectedLines.delete(line.id);
-            else graphSelectedLines.add(line.id);
-            renderTabs();
-            updateGraph();
-          };
-          gContainer.appendChild(btn);
-        });
-      }
-    }
+    renderGraphToggles();
   }
 
   function switchTab(lineId) {
@@ -1130,7 +1139,7 @@
     document.getElementById('linesContainer').appendChild(div);
     activeLineId = lineId;
     
-    // ★ 新しく追加した回線は、デフォルトでグラフの対象に含める
+    // ★ 追加された回線は自動的にグラフ表示対象にする
     graphSelectedLines.add(lineId);
 
     if(type==='fixed') updateHProv(lineId);
@@ -1185,7 +1194,7 @@
     let el = document.getElementById(id);
     if(el) el.remove();
     
-    // ★ グラフの選択リストからも削除
+    // ★ グラフ表示データからも削除
     graphSelectedLines.delete(id);
     delete lineGraphData[id];
 
@@ -1202,7 +1211,7 @@
     document.getElementById("linesContainer").innerHTML = "";
     lineCounter = 0; activeLineId = null;
     
-    // ★ リセット時にグラフのデータもクリア
+    // ★ グラフ表示データもクリア
     graphSelectedLines.clear();
     lineGraphData = {};
     
@@ -1220,14 +1229,16 @@
     });
   }
 
-  // ★ グラフを更新する専用関数
+  // ★ グラフ表示を専用で更新する関数
   function updateGraph() {
     let arrP = new Array(48).fill(0);
     let arrD = new Array(48).fill(0);
     let aFee = 0;
+    let selectedCount = 0;
 
     graphSelectedLines.forEach(id => {
       if(lineGraphData[id]) {
+        selectedCount++;
         for(let i=0; i<48; i++) {
           arrP[i] += lineGraphData[id].p[i];
           arrD[i] += lineGraphData[id].d[i];
@@ -1242,7 +1253,7 @@
       myChart.update(); 
     }
     
-    generateTimeline(arrP, arrD, aFee);
+    generateTimeline(arrP, arrD, aFee, selectedCount);
   }
 
   function calculate() {
@@ -1253,7 +1264,7 @@
     if (blocks.length === 0) {
       if(document.getElementById("bottomLineTotals")) document.getElementById("bottomLineTotals").innerHTML = "";
       if(document.getElementById("grandTotalDisplay")) document.getElementById("grandTotalDisplay").innerText = "0";
-      updateGraph(); 
+      updateGraph();
       return;
     }
 
@@ -1261,7 +1272,7 @@
       const type = block.getAttribute("data-type");
       let lM2 = 0; let lineAdminFee = 4950; 
       
-      // ★ 回線ごとのグラフ用配列
+      // ★ この回線の推移データを一時保存する配列
       let lineArrP = new Array(48).fill(0);
       let lineArrD = new Array(48).fill(0);
 
@@ -1424,11 +1435,11 @@
 
           let dv=0; if(m===1)dv=d1; else if(m<=23)dv=d2; else if(m===24)dv=d24;
           lineArrD[m-1] = dv;
-          
+
           if(m===2){ lM2 = pFinal+dv; grandM2 += lM2; }
         }
         
-        // ★ 回線ごとのデータを保存
+        // ★ 回線ごとの推移をデータ保存
         lineGraphData[block.id] = { p: lineArrP, d: lineArrD, aFee: lineAdminFee };
 
         if(block.querySelector('.line-final-total')) block.querySelector('.line-final-total').innerText = lM2.toLocaleString();
@@ -1441,7 +1452,7 @@
         const planSel = block.querySelector('.hPlanSelect');
         const selDevName = (devSel && devSel.value!=="none"&&hDev[devSel.value]) ? hDev[devSel.value].name : "";
         const isHome5GDev = devSel && (devSel.value.includes("home") || devSel.value.includes("hr") || selDevName.includes("home") || selDevName.includes("HR"));
-        let aFee = 3300; lineAdminFee = aFee; // 光は事務手数料3,300円
+        let aFee = 3300; lineAdminFee = aFee; 
 
         let planText = "";
         if(planSel){
@@ -1708,14 +1719,14 @@
            dv += monthKojiArr[m-1];
 
            let pFinal = Math.max(0, pTot - md - sup);
-           if(m===1) lineArrP[m-1] = pFinal + aFee; else lineArrP[m-1] = pFinal;
+           if(m===1) lineArrP[m-1] = pFinal + lineAdminFee; else lineArrP[m-1] = pFinal;
            lineArrD[m-1] = dv;
 
            if(m===2){ lM2 = pFinal+dv; grandM2 += lM2; }
         }
         
-        // ★ 回線ごとのデータを保存
-        lineGraphData[block.id] = { p: lineArrP, d: lineArrD, aFee: aFee };
+        // ★ 回線ごとの推移をデータ保存
+        lineGraphData[block.id] = { p: lineArrP, d: lineArrD, aFee: lineAdminFee };
 
         if(block.querySelector('.line-final-total')) block.querySelector('.line-final-total').innerText = lM2.toLocaleString();
         if (block.id === activeLineId) singleActiveM2 = lM2;
@@ -1729,12 +1740,13 @@
     let displayPrice = currentDisplayMode === 'all' ? grandM2 : singleActiveM2;
     if(document.getElementById("grandTotalDisplay")) document.getElementById("grandTotalDisplay").innerText = displayPrice.toLocaleString();
 
-    // ★ グラフとタイムラインを更新
+    // ★ グラフ側も連動して更新
     updateGraph();
   }
 
-  function generateTimeline(arrP, arrD, aFee) {
-    let html = `<table class="timeline-table"><tbody><tr><th>1ヵ月目 (選択分)</th><td><div style="margin-bottom:4px;">・契約事務手数料等: <span class="price-red">${aFee.toLocaleString()}円</span></div><div style="margin-bottom:4px;">・通信/OP料: <span class="price-red">${(Math.max(0, arrP[0]-aFee)).toLocaleString()}円</span></div><div>・機器/工事費: <span class="price-red">${arrD[0].toLocaleString()}円</span></div><div style="margin-top:8px; background:#eee; padding:4px 8px; display:inline-block; font-weight:bold;">計: ${(arrP[0]+arrD[0]).toLocaleString()}円</div></td></tr><tr><th>2〜23ヵ月目 (選択分)</th><td><div style="margin-bottom:4px;">・通信/OP料: <span class="price-red">${arrP[1].toLocaleString()}円/月</span></div><div>・機器/工事費: <span class="price-red">${arrD[1].toLocaleString()}円/月</span></div><div style="margin-top:8px; background:#e6f2ff; color:#0066cc; padding:4px 8px; display:inline-block; font-weight:bold;">合算目安: ${(arrP[1]+arrD[1]).toLocaleString()}円</div></td></tr><tr><th>24ヵ月目〜 (選択分)</th><td><div style="margin-bottom:4px;">・通信/OP料: <span class="price-red">${arrP[23].toLocaleString()}円/月</span></div><div>・機器残価等: <span class="price-red">${arrD[23].toLocaleString()}円</span></div></td></tr></tbody></table>`;
+  function generateTimeline(arrP, arrD, aFee, selectedCount) {
+    let label = selectedCount >= 2 ? `(${selectedCount}回線 合算)` : (selectedCount === 1 ? `(1回線のみ)` : `(選択なし)`);
+    let html = `<table class="timeline-table"><tbody><tr><th>1ヵ月目 <br><span style="font-size:11px; color:#666;">${label}</span></th><td><div style="margin-bottom:4px;">・契約事務手数料等: <span class="price-red">${aFee.toLocaleString()}円</span></div><div style="margin-bottom:4px;">・通信/OP料: <span class="price-red">${(Math.max(0, arrP[0]-aFee)).toLocaleString()}円</span></div><div>・機器/工事費: <span class="price-red">${arrD[0].toLocaleString()}円</span></div><div style="margin-top:8px; background:#eee; padding:4px 8px; display:inline-block; font-weight:bold;">計: ${(arrP[0]+arrD[0]).toLocaleString()}円</div></td></tr><tr><th>2〜23ヵ月目 <br><span style="font-size:11px; color:#666;">${label}</span></th><td><div style="margin-bottom:4px;">・通信/OP料: <span class="price-red">${arrP[1].toLocaleString()}円/月</span></div><div>・機器/工事費: <span class="price-red">${arrD[1].toLocaleString()}円/月</span></div><div style="margin-top:8px; background:#e6f2ff; color:#0066cc; padding:4px 8px; display:inline-block; font-weight:bold;">合算目安: ${(arrP[1]+arrD[1]).toLocaleString()}円</div></td></tr><tr><th>24ヵ月目〜 <br><span style="font-size:11px; color:#666;">${label}</span></th><td><div style="margin-bottom:4px;">・通信/OP料: <span class="price-red">${arrP[23].toLocaleString()}円/月</span></div><div>・機器残価等: <span class="price-red">${arrD[23].toLocaleString()}円</span></div></td></tr></tbody></table>`;
     if(document.getElementById('timelineContainer')) document.getElementById('timelineContainer').innerHTML = html;
   }
 
