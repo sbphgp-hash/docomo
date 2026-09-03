@@ -235,7 +235,6 @@
       <button class="btn btn-primary no-print" onclick="window.print()">🖨️ 見積印刷</button>
     </div>
     
-    <!-- グラフ表示対象を選択する専用UI -->
     <div class="no-print" style="background: #f8f9fa; padding: 12px 16px; border-radius: 12px; border: 1px solid #eee; margin-bottom: 16px;">
       <div style="font-size: 12px; font-weight: bold; color: #555; margin-bottom: 8px;">📊 グラフ・表に表示する回線を選択：</div>
       <div id="graph-line-selectors" style="display: flex; gap: 8px; flex-wrap: wrap;"></div>
@@ -437,17 +436,19 @@
 
       const [tDev, tPlan, tOpt, tDisc, tHPlan, tHProv, tHOpt, tHDisc, tHDev, tHKoji] = texts;
 
-      // ★列名が変更されても強制取得できるようにフォールバックを強化
+      // ★ここから: データ読み取りを「一番最初に正常に動いていた時のプログラム」に完全に戻し、かつ空の行を無視する安全装置を付与
       parseCSV(tDev).forEach(p => {
         let id = p.id || p.ID || `dev_${Math.random()}`;
-        let name = p.name || p.名前 || p.名称 || p.機種名 || p.商品名 || Object.values(p)[0] || id;
-        if(name === id && !p.price_total && !Object.values(p)[1]) return; 
+        let name = p.name || p.名前 || p.名称 || p.機種名 || id;
+        
+        // シートの下の方にある空の行を無視する
+        if(name === id && !p.price_total && !p.総額) return; 
         
         let cat = p.category || p.カテゴリ || "スマホ"; 
         deviceCategories.add(cat);
         
         dDev[id] = {
-          name: name, category: cat, price_total: getNum(p.price_total || p.総額 || p.価格 || p.金額 || Object.values(p)[1]),
+          name: name, category: cat, price_total: getNum(p.price_total || p.総額),
           hoshou_price: getNum(p.hoshou_price), applecare_price: getNum(p.applecare_price), applecare_theft_price: getNum(p.applecare_theft_price),
           kisyu: {m1: getNum(p.kisyu_m1), m2: getNum(p.kisyu_m2), m24: getNum(p.kisyu_m24)},
           shinki: {m1: getNum(p.shinki_m1), m2: getNum(p.shinki_m2), m24: getNum(p.shinki_m24)},
@@ -457,16 +458,16 @@
 
       parseCSV(tPlan).forEach(p => {
         let id = p.id || p.ID || `plan_${Math.random()}`;
-        let name = p.name || p.名前 || p.名称 || p.プラン名 || Object.values(p)[0] || id;
-        let price = getNum(p.price || p.料金 || p.月額 || Object.values(p)[1]);
+        let name = p.name || p.名前 || p.名称 || p.プラン名 || id;
+        let price = getNum(p.price || p.料金);
         dPlan[id] = { name: name, price: price, family: (p.family_ok||p.family)==="1", dcard: (p.dcard_ok||p.dcard)==="1", hikari: (p.hikari_ok||p.hikari)==="1", denki: (p.denki_ok||p.denki)==="1", raw: p };
         mPlanHtml += `<option value="${id}">${name} : ${price.toLocaleString()}円</option>`;
       });
 
       parseCSV(tOpt).forEach(o => {
         let id = o.id || o.ID || `opt_${Math.random()}`;
-        let name = o.name || o.名前 || o.名称 || o.オプション名 || Object.values(o)[0] || id;
-        let price = getNum(o.price || o.料金 || o.月額 || Object.values(o)[1]);
+        let name = o.name || o.名前 || o.名称 || id;
+        let price = getNum(o.price || o.料金);
         let type = o.type || o.タイプ || "other";
         if(type==="mandatory") mandatoryFeeTotal += price;
         else if(type==="call") mCallHtml += `<option value="${id}" data-price="${price}">${name} (+${price}円)</option>`;
@@ -477,15 +478,15 @@
 
       parseCSV(tDisc).forEach(d => {
         let id = d.id || d.ID || `disc_${Math.random()}`;
-        let name = d.name || d.名前 || d.名称 || d.キャンペーン名 || Object.values(d)[0] || id;
+        let name = d.name || d.名前 || d.名称 || d.キャンペーン名 || id;
         dDisc.push({id: id, name: name, duration: getNum(d.duration || d.期間)});
         mCpHtml += `<label class="check-label camp-opt camp-opt-${id}"><input type="checkbox" onchange="calculate()"><span style="color:#cc0000; font-weight:bold;">${name}</span></label>`;
       });
 
       parseCSV(tHPlan).forEach(p => {
         let id = p.id || p.ID || `hplan_${Math.random()}`;
-        let name = p.name || p.名前 || p.名称 || p.プラン名 || Object.values(p)[0] || id;
-        let price = getNum(p.price || p.料金 || p.月額 || Object.values(p)[1]);
+        let name = p.name || p.名前 || p.名称 || p.プラン名 || id;
+        let price = getNum(p.price || p.料金);
         let pType = p.prov_type || p.type || "none";
         hPlan[id] = { name: name, price: price, prov_type: pType, raw: p };
         hPlanHtml += `<option value="${id}">${name} : ${price.toLocaleString()}円</option>`;
@@ -493,31 +494,35 @@
 
       parseCSV(tHProv).forEach(p => {
         let id = p.id || p.ID || `hprov_${Math.random()}`;
-        let name = p.name || p.名前 || p.プロバイダ名 || Object.values(p)[0] || id;
+        let name = p.name || p.名前 || p.プロバイダ名 || id;
         let pType = p.prov_type || p.type || "none";
         hProv.push({id: id, name: name, prov_type: pType});
       });
 
       parseCSV(tHOpt).forEach(o => {
         let id = o.id || o.ID || `hopt_${Math.random()}`;
-        let name = o.name || o.名前 || o.名称 || o.オプション名 || o.サービス名 || Object.values(o)[0] || id;
-        let price = getNum(o.price || o.料金 || o.月額 || o.金額 || Object.values(o)[1]);
+        let name = o.name || o.名前 || o.名称 || id;
+        let price = getNum(o.price || o.料金);
         hOpt.push({id: id, name: name, price: price});
         hOptHtml += `<label class="check-label dyn-hopt" data-price="${price}"><input type="checkbox" onchange="calculate()"> ${name} (+${price}円)</label>`;
       });
 
       parseCSV(tHDisc).forEach(d => {
         let id = d.id || d.ID || `hdisc_${Math.random()}`;
-        let name = d.name || d.名前 || d.名称 || d.キャンペーン名 || Object.values(d)[0] || id;
-        hDisc.push({id: id, name: name, price: getNum(d.price || d.割引額 || d.割引 || d.val || d.value || d.金額 || Object.values(d)[1]), duration: getNum(d.duration || d.期間 || d.times)});
+        let name = d.name || d.名前 || d.名称 || d.キャンペーン名 || id;
+        hDisc.push({id: id, name: name, price: getNum(d.price || d.割引額 || d.割引 || d.val || d.value || d.金額), duration: getNum(d.duration || d.期間 || d.times)});
         hCpHtml += `<label class="check-label hcamp-opt hcamp-opt-${id}"><input type="checkbox" onchange="calculate()"><span style="color:#cc0000; font-weight:bold;">${name}</span></label>`;
       });
 
       parseCSV(tHDev).forEach(d => {
         let id = d.id || d.ID || `hdev_${Math.random()}`;
-        let name = d.name || d.名前 || d.名称 || d.機器名 || d.ルーター名 || d.品名 || Object.values(d)[0] || id;
+        let name = d.name || d.名前 || d.名称 || d.機器名 || id;
+        
+        // シートの下の方にある空の行を無視する (hdev_0.xxx が表示されるのを防ぐ)
+        if (name === id && !d.price_total && !d.総額) return;
+
         hDev[id] = {
-          name: name, price_total: getNum(d.price_total||d.総額||d.価格||d.金額||d.本体価格||Object.values(d)[1]),
+          name: name, price_total: getNum(d.price_total||d.総額),
           d12_1: getNum(d.div12_m1||d.d12_1), d12_2: getNum(d.div12_m2||d.d12_2),
           d24_1: getNum(d.div24_m1||d.d24_1), d24_2: getNum(d.div24_m2||d.d24_2),
           d36_1: getNum(d.div36_m1||d.d36_1), d36_2: getNum(d.div36_m2||d.d36_2),
@@ -529,12 +534,17 @@
 
       parseCSV(tHKoji).forEach(k => {
         let id = k.id || k.ID || `hkoji_${Math.random()}`;
-        let name = k.name || k.名前 || k.名称 || k.工事名 || k.費用名 || Object.values(k)[0] || id;
-        let total = getNum(k.price_total || k.総額 || k.料金 || k.金額 || Object.values(k)[1]);
+        let name = k.name || k.名前 || k.名称 || k.工事名 || id;
+        
+        // シートの下の方にある空の行を無視する
+        if (name === id && !k.price_total && !k.総額) return;
+
+        let total = getNum(k.price_total || k.総額);
         let d12m1 = getNum(k.d12_m1), d12m2 = getNum(k.d12_m2);
         let d24m1 = getNum(k.d24_m1), d24m2 = getNum(k.d24_m2);
         hKojiHtml += `<label class="check-label dyn-hkoji" data-total="${total}" data-d12m1="${d12m1}" data-d12m2="${d12m2}" data-d24m1="${d24m1}" data-d24m2="${d24m2}"><input type="checkbox" onchange="calculate()"> ${name}</label>`;
       });
+      // ★ここまで
 
       document.getElementById('addMobileBtn').disabled = false;
       document.getElementById('addMobileBtn').innerHTML = '📱 スマホ追加';
@@ -552,6 +562,10 @@
     
     const sidebar = document.getElementById('modalSidebar');
     sidebar.innerHTML = '';
+
+    // ★前の画面の表示(home 5G等)が残らないように確実にリセットする
+    const grid = document.getElementById('modalGrid');
+    grid.innerHTML = ''; 
     
     const noneBtn = document.createElement('button');
     noneBtn.className = 'm-cat-btn';
