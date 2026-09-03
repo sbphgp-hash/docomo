@@ -124,7 +124,7 @@
   }
   .mode-btn.active { background: #cc0000; color: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
 
-  /* 機種選択モーダル */
+  /* 機種/オプション選択モーダル共通 */
   .modal-overlay {
     position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6);
     z-index: 2000; display: none; justify-content: center; align-items: center;
@@ -241,16 +241,46 @@
   </div>
 </div>
 
-<!-- 機種選択モーダル -->
+<!-- スマホ・ルーター機種選択モーダル -->
 <div id="deviceModal" class="modal-overlay">
   <div class="modal-content">
     <div class="modal-header">
-      <h3>📱 機種を選択</h3>
+      <h3>📱 機種/機器 を選択</h3>
       <button class="btn-close" onclick="closeDeviceModal()">×</button>
     </div>
     <div class="modal-body-container">
       <div class="modal-sidebar" id="modalSidebar"></div>
       <div class="modal-main" id="modalGrid"></div>
+    </div>
+  </div>
+</div>
+
+<!-- 光オプション選択用モーダル -->
+<div id="optModal" class="modal-overlay">
+  <div class="modal-content" style="max-width: 500px; height: 75vh;">
+    <div class="modal-header">
+      <h3>⚙️ オプションを選択</h3>
+      <button class="btn-close" onclick="closeOptModal()">×</button>
+    </div>
+    <div class="modal-body-container" style="flex-direction: column; overflow-y: auto; padding: 20px; background: #fdfdfd;" id="optModalGrid">
+    </div>
+    <div style="padding: 16px; border-top: 1px solid #eee; text-align: center; background: #fafbfc;">
+      <button class="btn btn-primary" onclick="closeOptModal()" style="width: 100%; justify-content: center; font-size: 16px; padding: 12px;">決定 / 閉じる</button>
+    </div>
+  </div>
+</div>
+
+<!-- 光工事費選択用モーダル -->
+<div id="kojiModal" class="modal-overlay">
+  <div class="modal-content" style="max-width: 500px; height: 75vh;">
+    <div class="modal-header">
+      <h3>🛠️ 工事費・その他費用 を選択</h3>
+      <button class="btn-close" onclick="closeKojiModal()">×</button>
+    </div>
+    <div class="modal-body-container" style="flex-direction: column; overflow-y: auto; padding: 20px; background: #fdfdfd;" id="kojiModalGrid">
+    </div>
+    <div style="padding: 16px; border-top: 1px solid #eee; text-align: center; background: #fafbfc;">
+      <button class="btn btn-primary" onclick="closeKojiModal()" style="width: 100%; justify-content: center; font-size: 16px; padding: 12px;">決定 / 閉じる</button>
     </div>
   </div>
 </div>
@@ -265,9 +295,15 @@
   window.setDisplayMode = setDisplayMode;
   window.switchTab = switchTab;
   window.updateHProv = updateHProv;
+  
+  // モーダル操作関数をグローバルに登録
   window.openDeviceModal = openDeviceModal;
   window.closeDeviceModal = closeDeviceModal;
   window.selectDevice = selectDevice;
+  window.openFixedOptModal = openFixedOptModal;
+  window.closeOptModal = closeOptModal;
+  window.openKojiModal = openKojiModal;
+  window.closeKojiModal = closeKojiModal;
   
   window.forceFetchData = function() {
       if(confirm("スプレッドシートの最新データを読み込みますか？")) {
@@ -296,7 +332,11 @@
   let mandatoryFeeTotal = 0; 
   let activeLineId = null;
   let currentDisplayMode = 'all';
+  
   let editingDeviceLineId = null; 
+  let editingDeviceType = 'mobile'; 
+  let editingOptLineId = null; 
+  let editingKojiLineId = null; // ★光工事費編集用のID管理
 
   let mPlanHtml = `<option value="none">未選択</option>`;
   let mCallHtml = `<option value="none">未加入 (0円)</option>`, mHoshouHtml = `<option value="none">未加入 (0円)</option>`;
@@ -476,8 +516,10 @@
     } catch (e) { console.error(e); alert("読み込みエラーが発生しました。"); }
   }
 
-  function openDeviceModal(lineId) {
+  // --- 機種・ルーター選択用モーダル ---
+  function openDeviceModal(lineId, type = 'mobile') {
     editingDeviceLineId = lineId;
+    editingDeviceType = type;
     document.getElementById('deviceModal').style.display = 'flex';
     
     const sidebar = document.getElementById('modalSidebar');
@@ -485,27 +527,40 @@
     
     const noneBtn = document.createElement('button');
     noneBtn.className = 'm-cat-btn';
-    noneBtn.innerText = '💳 SIMのみ (機器なし)';
+    noneBtn.innerText = type === 'mobile' ? '💳 SIMのみ (機器なし)' : '💳 機器なし / その他';
     noneBtn.onclick = (e) => { selectDevice('none'); };
     sidebar.appendChild(noneBtn);
 
-    let firstCat = null;
-    deviceCategories.forEach(cat => {
-      if(!firstCat) firstCat = cat;
+    if (type === 'mobile') {
+      let firstCat = null;
+      deviceCategories.forEach(cat => {
+        if(!firstCat) firstCat = cat;
+        const btn = document.createElement('button');
+        btn.className = 'm-cat-btn';
+        btn.innerText = cat;
+        btn.onclick = (e) => {
+          document.querySelectorAll('.m-cat-btn').forEach(b => b.classList.remove('active'));
+          e.target.classList.add('active');
+          renderDeviceGrid(cat, type);
+        };
+        sidebar.appendChild(btn);
+      });
+
+      if(firstCat) {
+        sidebar.childNodes[1].classList.add('active'); 
+        renderDeviceGrid(firstCat, type);
+      }
+    } else {
       const btn = document.createElement('button');
-      btn.className = 'm-cat-btn';
-      btn.innerText = cat;
+      btn.className = 'm-cat-btn active';
+      btn.innerText = 'ルーター・機器';
       btn.onclick = (e) => {
         document.querySelectorAll('.m-cat-btn').forEach(b => b.classList.remove('active'));
         e.target.classList.add('active');
-        renderDeviceGrid(cat);
+        renderDeviceGrid('all', type);
       };
       sidebar.appendChild(btn);
-    });
-
-    if(firstCat) {
-      sidebar.childNodes[1].classList.add('active'); 
-      renderDeviceGrid(firstCat);
+      renderDeviceGrid('all', type);
     }
   }
 
@@ -514,23 +569,41 @@
     editingDeviceLineId = null;
   }
 
-  function renderDeviceGrid(category) {
+  function renderDeviceGrid(category, type = 'mobile') {
     const grid = document.getElementById('modalGrid');
     grid.innerHTML = '';
     
-    for(const id in dDev) {
-      if(dDev[id].category === category) {
-        let nameLower = dDev[id].name.toLowerCase();
-        let isApple = nameLower.includes("iphone") || nameLower.includes("ipad");
-        let icon = isApple ? "🍎" : "📱";
-        if(nameLower.includes("キッズ")) icon = "🧒";
+    if (type === 'mobile') {
+      for(const id in dDev) {
+        if(dDev[id].category === category) {
+          let nameLower = dDev[id].name.toLowerCase();
+          let isApple = nameLower.includes("iphone") || nameLower.includes("ipad");
+          let icon = isApple ? "🍎" : "📱";
+          if(nameLower.includes("キッズ")) icon = "🧒";
+          
+          let priceText = dDev[id].price_total > 0 ? `総額目安: ${dDev[id].price_total.toLocaleString()}円` : "";
+          
+          grid.innerHTML += `
+            <div class="device-card" onclick="selectDevice('${id}')">
+              <div class="device-card-img">${icon}</div>
+              <div class="device-card-name">${dDev[id].name}</div>
+              <div class="device-card-price">${priceText}</div>
+            </div>
+          `;
+        }
+      }
+    } else {
+      for(const id in hDev) {
+        let nameLower = hDev[id].name.toLowerCase();
+        let icon = "🌐";
+        if(nameLower.includes("home") || nameLower.includes("hr")) icon = "🏠";
         
-        let priceText = dDev[id].price_total > 0 ? `総額目安: ${dDev[id].price_total.toLocaleString()}円` : "";
+        let priceText = hDev[id].price_total > 0 ? `総額目安: ${hDev[id].price_total.toLocaleString()}円` : "";
         
         grid.innerHTML += `
           <div class="device-card" onclick="selectDevice('${id}')">
             <div class="device-card-img">${icon}</div>
-            <div class="device-card-name">${dDev[id].name}</div>
+            <div class="device-card-name">${hDev[id].name}</div>
             <div class="device-card-price">${priceText}</div>
           </div>
         `;
@@ -542,13 +615,196 @@
     if(!editingDeviceLineId) return;
     const block = document.getElementById(editingDeviceLineId);
     if(block) {
-        block.querySelector('.hiddenDeviceVal').value = devId;
-        block.querySelector('.displayDeviceName').innerText = devId === 'none' ? '💳 SIMのみ (機器なし)' : dDev[devId].name;
+        if (editingDeviceType === 'mobile') {
+            block.querySelector('.hiddenDeviceVal').value = devId;
+            block.querySelector('.displayDeviceName').innerText = devId === 'none' ? '💳 SIMのみ (機器なし)' : dDev[devId].name;
+        } else {
+            block.querySelector('.hDevSelect').value = devId;
+            block.querySelector('.displayHDevName').innerText = devId === 'none' ? '機器なし / その他' : hDev[devId].name;
+        }
     }
     closeDeviceModal();
     calculate();
   }
 
+  // --- 光オプション専用モーダル ---
+  function openFixedOptModal(lineId) {
+      editingOptLineId = lineId;
+      const block = document.getElementById(lineId);
+      const hiddenGrid = block.querySelector('.hidden-hopt-container');
+      const modalGrid = document.getElementById('optModalGrid');
+      modalGrid.innerHTML = '';
+
+      const labels = hiddenGrid.querySelectorAll('.dyn-hopt');
+      labels.forEach((lbl, index) => {
+          const cb = lbl.querySelector('input');
+          let text = lbl.innerText.trim();
+          const isDisabled = cb.disabled;
+          const isChecked = cb.checked;
+
+          const div = document.createElement('div');
+          div.style.display = 'flex';
+          div.style.alignItems = 'center';
+          div.style.padding = '14px 16px';
+          div.style.marginBottom = '10px';
+          div.style.borderRadius = '10px';
+          div.style.border = isDisabled ? '1px solid #eee' : (isChecked ? '2px solid #cc0000' : '1px solid #ddd');
+          div.style.background = isChecked ? '#fff0f5' : '#fff';
+          div.style.opacity = isDisabled ? '0.5' : '1';
+          div.style.cursor = isDisabled ? 'not-allowed' : 'pointer';
+          div.style.transition = 'all 0.2s';
+          
+          div.onmouseenter = () => { if(!cb.disabled && !cb.checked) div.style.backgroundColor = '#fafbfc'; };
+          div.onmouseleave = () => { if(!cb.disabled && !cb.checked) div.style.backgroundColor = '#fff'; };
+
+          div.innerHTML = `
+              <input type="checkbox" style="transform: scale(1.4); margin-right: 16px; accent-color: #cc0000; cursor:inherit;" ${isChecked ? 'checked' : ''} ${isDisabled ? 'disabled' : ''}>
+              <span style="font-weight: bold; font-size: 14px; color: ${isChecked ? '#cc0000' : '#333'}; line-height: 1.4;">${text}</span>
+          `;
+
+          div.onclick = (e) => {
+              if (cb.disabled) return;
+              if (e.target.tagName !== 'INPUT') {
+                  const input = div.querySelector('input');
+                  input.checked = !input.checked;
+              }
+              cb.checked = div.querySelector('input').checked;
+              calculate();
+          };
+          
+          modalGrid.appendChild(div);
+      });
+      
+      document.getElementById('optModal').style.display = 'flex';
+  }
+
+  function closeOptModal() {
+      document.getElementById('optModal').style.display = 'none';
+      editingOptLineId = null;
+  }
+
+  function updateOptModalUI() {
+      if(!editingOptLineId) return;
+      const block = document.getElementById(editingOptLineId);
+      if(!block) return;
+      const hiddenLabels = block.querySelectorAll('.hidden-hopt-container .dyn-hopt');
+      const modalDivs = document.getElementById('optModalGrid').children;
+      
+      hiddenLabels.forEach((lbl, i) => {
+          const cb = lbl.querySelector('input');
+          const div = modalDivs[i];
+          if(!div) return;
+          
+          const isDisabled = cb.disabled;
+          const isChecked = cb.checked;
+          
+          div.style.opacity = isDisabled ? '0.5' : '1';
+          div.style.cursor = isDisabled ? 'not-allowed' : 'pointer';
+          
+          const input = div.querySelector('input');
+          input.disabled = isDisabled;
+          input.checked = isChecked;
+          
+          div.style.border = isDisabled ? '1px solid #eee' : (isChecked ? '2px solid #cc0000' : '1px solid #ddd');
+          div.style.background = isChecked ? '#fff0f5' : '#fff';
+          div.querySelector('span').style.color = isChecked ? '#cc0000' : '#333';
+      });
+  }
+
+  // --- 光工事費専用モーダル ---
+  function openKojiModal(lineId) {
+      editingKojiLineId = lineId;
+      const block = document.getElementById(lineId);
+      const hiddenGrid = block.querySelector('.hidden-hkoji-container');
+      const modalGrid = document.getElementById('kojiModalGrid');
+      modalGrid.innerHTML = '';
+
+      const labels = hiddenGrid.querySelectorAll('.dyn-hkoji');
+      labels.forEach((lbl, index) => {
+          const cb = lbl.querySelector('input');
+          let text = lbl.innerText.trim();
+          let price = Number(lbl.getAttribute("data-total")) || 0;
+          let priceText = price > 0 ? ` (+${price.toLocaleString()}円)` : '';
+
+          const isDisabled = cb.disabled;
+          const isChecked = cb.checked;
+
+          const div = document.createElement('div');
+          div.style.display = 'flex';
+          div.style.alignItems = 'center';
+          div.style.padding = '14px 16px';
+          div.style.marginBottom = '10px';
+          div.style.borderRadius = '10px';
+          div.style.border = isDisabled ? '1px solid #eee' : (isChecked ? '2px solid #cc0000' : '1px solid #ddd');
+          div.style.background = isChecked ? '#fff0f5' : '#fff';
+          div.style.opacity = isDisabled ? '0.5' : '1';
+          div.style.cursor = isDisabled ? 'not-allowed' : 'pointer';
+          div.style.transition = 'all 0.2s';
+          
+          div.onmouseenter = () => { if(!cb.disabled && !cb.checked) div.style.backgroundColor = '#fafbfc'; };
+          div.onmouseleave = () => { if(!cb.disabled && !cb.checked) div.style.backgroundColor = '#fff'; };
+
+          div.innerHTML = `
+              <input type="checkbox" style="transform: scale(1.4); margin-right: 16px; accent-color: #cc0000; cursor:inherit;" ${isChecked ? 'checked' : ''} ${isDisabled ? 'disabled' : ''}>
+              <div style="display:flex; flex-direction:column;">
+                <span style="font-weight: bold; font-size: 14px; color: ${isChecked ? '#cc0000' : '#333'}; line-height: 1.4;">${text}</span>
+                <span style="font-size: 12px; color: ${isChecked ? '#cc0000' : '#666'}; line-height: 1.4;">${priceText}</span>
+              </div>
+          `;
+
+          div.onclick = (e) => {
+              if (cb.disabled) return;
+              if (e.target.tagName !== 'INPUT') {
+                  const input = div.querySelector('input');
+                  input.checked = !input.checked;
+              }
+              cb.checked = div.querySelector('input').checked;
+              calculate();
+          };
+          
+          modalGrid.appendChild(div);
+      });
+      
+      document.getElementById('kojiModal').style.display = 'flex';
+  }
+
+  function closeKojiModal() {
+      document.getElementById('kojiModal').style.display = 'none';
+      editingKojiLineId = null;
+  }
+
+  function updateKojiModalUI() {
+      if(!editingKojiLineId) return;
+      const block = document.getElementById(editingKojiLineId);
+      if(!block) return;
+      const hiddenLabels = block.querySelectorAll('.hidden-hkoji-container .dyn-hkoji');
+      const modalDivs = document.getElementById('kojiModalGrid').children;
+      
+      hiddenLabels.forEach((lbl, i) => {
+          const cb = lbl.querySelector('input');
+          const div = modalDivs[i];
+          if(!div) return;
+          
+          const isDisabled = cb.disabled;
+          const isChecked = cb.checked;
+          
+          div.style.opacity = isDisabled ? '0.5' : '1';
+          div.style.cursor = isDisabled ? 'not-allowed' : 'pointer';
+          
+          const input = div.querySelector('input');
+          input.disabled = isDisabled;
+          input.checked = isChecked;
+          
+          div.style.border = isDisabled ? '1px solid #eee' : (isChecked ? '2px solid #cc0000' : '1px solid #ddd');
+          div.style.background = isChecked ? '#fff0f5' : '#fff';
+          
+          const spans = div.querySelectorAll('span');
+          spans[0].style.color = isChecked ? '#cc0000' : '#333';
+          if(spans[1]) spans[1].style.color = isChecked ? '#cc0000' : '#666';
+      });
+  }
+
+  // --- メイン処理 ---
   function safeAddLine(type) { try { addLine(type); } catch(e) { console.error("Line Add Error:", e); } }
 
   function setDisplayMode(mode) {
@@ -622,7 +878,7 @@
                   <span class="form-label">選択機種</span>
                   <div style="display:flex; justify-content:space-between; align-items:center; border:2px solid #cc0000; border-radius:8px; padding:8px 12px; background:#fff;">
                     <span class="displayDeviceName" style="font-weight:900; font-size:14px; color:#333;">💳 SIMのみ (機器なし)</span>
-                    <button class="btn btn-primary" onclick="openDeviceModal('${lineId}')" style="padding:6px 12px;">変更</button>
+                    <button class="btn btn-primary" onclick="openDeviceModal('${lineId}', 'mobile')" style="padding:6px 12px;">変更</button>
                     <input type="hidden" class="hiddenDeviceVal" value="none">
                   </div>
                 </div>
@@ -711,10 +967,20 @@
                   <div class="form-group" style="flex:1;"><span class="form-label">料金プラン</span><select class="hPlanSelect" onchange="updateHProv('${lineId}'); calculate();">${hPlanHtml}</select></div>
                   <div class="form-group" style="flex:1;"><span class="form-label">プロバイダー</span><select class="hProvSelect" onchange="calculate()"><option value="none">不要 / 未選択</option></select></div>
                 </div>
+                
+                <!-- 光オプション用UI -->
                 <div class="form-group" style="border-top:1px dashed #eee; padding-top:8px; margin-top:8px;">
                   <span class="form-label">オプション</span>
-                  <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">${hOptHtml}</div>
+                  
+                  <!-- 実際の計算用チェックボックスは非表示で保持 -->
+                  <div style="display:none;" class="hidden-hopt-container">${hOptHtml}</div>
+                  
+                  <div style="display:flex; justify-content:space-between; align-items:center; border:2px solid #cc0000; border-radius:8px; padding:8px 12px; background:#fff;">
+                    <span class="displayHOptText" style="font-weight:900; font-size:14px; color:#333;">選択なし</span>
+                    <button class="btn btn-primary" onclick="openFixedOptModal('${lineId}')" style="padding:6px 12px;">変更</button>
+                  </div>
                 </div>
+
               </div>
               <div class="section-footer">ネット・OP 計: <span class="col-total-plan price-text">0</span>円</div>
             </div>
@@ -723,7 +989,14 @@
               <div class="section-header">🌐 工事・ルーター</div>
               <div class="section-body">
                 <div style="display:flex; gap:12px;">
-                  <div class="form-group" style="flex:2;"><span class="form-label">ルーター機器</span><select class="hDevSelect" onchange="calculate()">${hDevHtml}</select></div>
+                  <div class="form-group" style="flex:2;">
+                    <span class="form-label">ルーター機器</span>
+                    <div style="display:flex; justify-content:space-between; align-items:center; border:2px solid #cc0000; border-radius:8px; padding:8px 12px; background:#fff;">
+                      <span class="displayHDevName" style="font-weight:900; font-size:14px; color:#333;">機器なし / その他</span>
+                      <button class="btn btn-primary" onclick="openDeviceModal('${lineId}', 'fixed')" style="padding:6px 12px;">変更</button>
+                      <input type="hidden" class="hDevSelect" value="none">
+                    </div>
+                  </div>
                   <div class="form-group" style="flex:1;"><span class="form-label">お支払い方法</span><select class="hPaySelect" onchange="calculate()"><option value="1">一括払い</option><option value="12">12回分割</option><option value="24">24回分割</option><option value="36" selected>36回分割</option><option value="48">48回分割</option></select></div>
                 </div>
                 <div class="form-group" style="border-top:1px dashed #eee; padding-top:8px; margin-top:8px;">
@@ -737,7 +1010,13 @@
                     </select>
                   </div>
                   
-                  <div id="hKojiContainer_${lineId}" style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">${hKojiHtml}</div>
+                  <!-- 光工事費用UI (モーダル対応) -->
+                  <div style="display:none;" class="hidden-hkoji-container">${hKojiHtml}</div>
+                  
+                  <div style="display:flex; justify-content:space-between; align-items:center; border:2px solid #cc0000; border-radius:8px; padding:8px 12px; background:#fff;">
+                    <span class="displayHKojiText" style="font-weight:900; font-size:14px; color:#333;">選択なし</span>
+                    <button class="btn btn-primary" onclick="openKojiModal('${lineId}')" style="padding:6px 12px;">変更</button>
+                  </div>
                   
                   <div style="text-align:right; font-size:11px; color:#cc0000; font-weight:bold; margin-top:6px;">
                     ※工事費総額: <span class="koji-total-display">0</span>円
@@ -815,6 +1094,11 @@
         if(hVal && dest.querySelector('.hiddenDeviceVal')) dest.querySelector('.hiddenDeviceVal').value = hVal.value;
         if(dName && dest.querySelector('.displayDeviceName')) dest.querySelector('.displayDeviceName').innerText = dName.innerText;
     } else {
+        let hDevVal = src.querySelector('.hDevSelect');
+        let hDevName = src.querySelector('.displayHDevName');
+        if(hDevVal && dest.querySelector('.hDevSelect')) dest.querySelector('.hDevSelect').value = hDevVal.value;
+        if(hDevName && dest.querySelector('.displayHDevName')) dest.querySelector('.displayHDevName').innerText = hDevName.innerText;
+
         updateHProv(activeLineId);
     }
     calculate();
@@ -1067,16 +1351,13 @@
         const isHomePlanSelected = planText.includes("home") || planText.includes("5G");
         const isHome5G = isHome5GDev || isHomePlanSelected;
         const is10G = planText.includes("10ギガ") || planText.includes("10G");
-        // 戸建プランかどうかの判定
         const isKodate = planText.includes("戸建") || planText.includes("戸建て") || planText.includes("ファミリー");
-        // テレビオプションが契約可能なプランか判定（戸建 または 10ギガ）
         const isTvAvailable = !isHome5G && (isKodate || is10G);
 
         let isPhoneValue = false;
         let hasPhoneOpt = false;
         let hasTvOpt = false;
 
-        // まず光電話バリューのチェック有無を確認
         block.querySelectorAll('.dyn-hopt').forEach(lbl => {
             if (lbl.innerText.includes("ドコモ光電話バリュー") && lbl.querySelector('input').checked) {
                 isPhoneValue = true;
@@ -1102,7 +1383,6 @@
                 if (txt.includes("着信お知らせメール")) isBundleDuplicate = true;
             }
 
-            // テレビオプションは「戸建」または「10ギガ」以外は選択不可
             if (isTvService && !isTvAvailable) {
                 cb.checked = false;
                 cb.disabled = true;
@@ -1120,14 +1400,32 @@
                 lbl.style.opacity = "1";
             }
 
-            // 電話系オプションまたはテレビ系オプションが選択されているか追跡
             if (cb.checked) {
                 if (txt.includes("光電話") || txt.includes("光電話バリュー")) hasPhoneOpt = true;
                 if (isTvService) hasTvOpt = true;
             }
         });
 
-        // 工事費の有効/無効化制御
+        // 光オプションの選択数をUIに反映
+        let optCheckedCount = 0;
+        let optTotal = 0;
+        block.querySelectorAll('.dyn-hopt input:checked').forEach(cb => {
+            optCheckedCount++;
+            optTotal += Number(cb.closest('.check-label').getAttribute("data-price"));
+        });
+        const optSummary = block.querySelector('.displayHOptText');
+        if (optSummary) {
+            if (optCheckedCount === 0) {
+                optSummary.innerText = "選択なし";
+                optSummary.style.color = "#888";
+            } else {
+                optSummary.innerHTML = `<span style="color:#cc0000;">${optCheckedCount}件選択中 (+${optTotal.toLocaleString()}円)</span>`;
+            }
+        }
+        if (editingOptLineId === block.id) {
+            updateOptModalUI();
+        }
+
         const kojiPaySel = block.querySelector('.hKojiPaySelect');
         if (kojiPaySel) {
             kojiPaySel.disabled = isHome5G;
@@ -1145,12 +1443,10 @@
                 cb.disabled = true;
                 lbl.style.opacity = "0.4";
             } else if (isPhoneKoji && !hasPhoneOpt) {
-                // 電話オプション非選択時は電話工事費を無効化
                 cb.checked = false;
                 cb.disabled = true;
                 lbl.style.opacity = "0.4";
             } else if (isTvKoji && !hasTvOpt) {
-                // テレビオプション非選択時はテレビ工事費を無効化
                 cb.checked = false;
                 cb.disabled = true;
                 lbl.style.opacity = "0.4";
@@ -1159,6 +1455,11 @@
                 lbl.style.opacity = "1";
             }
         });
+
+        // ★追加：光工事費の選択数をUIに反映、モーダルが開いていれば更新
+        if (editingKojiLineId === block.id) {
+            updateKojiModalUI();
+        }
 
         block.querySelectorAll('.hcamp-opt').forEach(lbl => {
             let cb = lbl.querySelector('input');
@@ -1208,8 +1509,10 @@
         let kFeeM2 = 0;
         let monthKojiArr = new Array(48).fill(0);
         let kojiTotalSum = 0; 
+        let kojiCheckedCount = 0;
 
         block.querySelectorAll('.dyn-hkoji input:checked').forEach(cb => {
+            kojiCheckedCount++;
             const lbl = cb.closest('.check-label');
             let total = Number(lbl.getAttribute("data-total")) || 0;
             kojiTotalSum += total; 
@@ -1238,6 +1541,16 @@
 
         if(block.querySelector('.koji-total-display')) {
             block.querySelector('.koji-total-display').innerText = kojiTotalSum.toLocaleString();
+        }
+        
+        const kojiSummary = block.querySelector('.displayHKojiText');
+        if (kojiSummary) {
+            if (kojiCheckedCount === 0) {
+                kojiSummary.innerText = "選択なし";
+                kojiSummary.style.color = "#888";
+            } else {
+                kojiSummary.innerHTML = `<span style="color:#cc0000;">${kojiCheckedCount}件選択中</span>`;
+            }
         }
 
         if(block.querySelector('.col-total-device')) block.querySelector('.col-total-device').innerText = (devM2 + kFeeM2).toLocaleString();
