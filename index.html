@@ -329,7 +329,7 @@
   window.closeKojiModal = closeKojiModal;
   
   window.forceFetchData = function() {
-      if(confirm("スプレッドシートの最新データを強制的に読み込みますか？")) {
+      if(confirm("スプレッドシートの最新データを読み込みますか？")) {
           localStorage.removeItem("docomo_sim_cache_v2");
           location.reload();
       }
@@ -374,8 +374,15 @@
 
   function parseCSV(text) {
     if (!text) return [];
-    text = text.replace(/^\uFEFF/, ''); 
-    const lines = text.trim().split('\n').filter(l => l && !l.match(/^\|?[\s:-]+\|?$/));
+    text = text.replace(/^\uFEFF/, '').trim(); 
+    
+    // ★重要: HTMLのログイン画面やエラーコードが返ってきた場合は絶対に無視して安全に保護する
+    if (text.toLowerCase().startsWith('<!doctype') || text.toLowerCase().startsWith('<html')) {
+        console.warn("CSVの代わりにHTMLエラーを受信したためブロックしました。");
+        return [];
+    }
+    
+    const lines = text.split('\n').filter(l => l && !l.match(/^\|?[\s:-]+\|?$/));
     if (lines.length < 2) return [];
 
     let delimiter = ',';
@@ -425,30 +432,45 @@
       } catch(e) {}
 
       if (!texts) {
-          const fetchTxt = async (url) => { if(!url) return ""; try { return await (await fetch(url)).text(); } catch(e) { return ""; } };
+          const fetchTxt = async (url) => { 
+              if(!url) return ""; 
+              try { 
+                  let r = await fetch(url); 
+                  let t = await r.text(); 
+                  // ★エラーページの場合は空文字を返す
+                  if (t.trim().toLowerCase().startsWith('<!doctype') || t.trim().toLowerCase().startsWith('<html')) return "";
+                  return t;
+              } catch(e) { return ""; } 
+          };
+          
           texts = await Promise.all([
             fetchTxt(DEVICE_CSV_URL), fetchTxt(PLAN_CSV_URL), fetchTxt(OPTION_CSV_URL), fetchTxt(DISCOUNT_CSV_URL),
             fetchTxt(H_PLAN_URL), fetchTxt(H_PROV_URL), fetchTxt(H_OPT_URL), fetchTxt(H_DISC_URL),
             fetchTxt(H_DEV_URL), fetchTxt(H_KOJI_CSV_URL)
           ]);
-          try { localStorage.setItem(CACHE_KEY, JSON.stringify({ time: Date.now(), data: texts })); } catch(e) {}
+          
+          // 全データが空でない場合のみキャッシュする（エラー時のバグデータ保存を防止）
+          let isDataValid = texts.every(t => t !== "");
+          if (isDataValid) {
+              try { localStorage.setItem(CACHE_KEY, JSON.stringify({ time: Date.now(), data: texts })); } catch(e) {}
+          } else if (texts.every(t => t === "")) {
+              alert("データの読み込みに一時的に失敗しました。時間を置いてから「⬇️ 更新」ボタンを押してください。");
+          }
       }
 
       const [tDev, tPlan, tOpt, tDisc, tHPlan, tHProv, tHOpt, tHDisc, tHDev, tHKoji] = texts;
 
-      // ★ここから: データ読み取りを「一番最初に正常に動いていた時のプログラム」に完全に戻し、かつ空の行を無視する安全装置を付与
       parseCSV(tDev).forEach(p => {
         let id = p.id || p.ID || `dev_${Math.random()}`;
-        let name = p.name || p.名前 || p.名称 || p.機種名 || id;
-        
-        // シートの下の方にある空の行を無視する
-        if(name === id && !p.price_total && !p.総額) return; 
+        // ★修正: 確実な列名だけを取得し、変なコードを拾わないように安全化
+        let name = p.name || p.名前 || p.名称 || p.機種名 || p.商品名 || id;
+        if(name === id && !p.price_total && !p.総額 && !p.価格) return; 
         
         let cat = p.category || p.カテゴリ || "スマホ"; 
         deviceCategories.add(cat);
         
         dDev[id] = {
-          name: name, category: cat, price_total: getNum(p.price_total || p.総額),
+          name: name, category: cat, price_total: getNum(p.price_total || p.総額 || p.価格 || p.金額),
           hoshou_price: getNum(p.hoshou_price), applecare_price: getNum(p.applecare_price), applecare_theft_price: getNum(p.applecare_theft_price),
           kisyu: {m1: getNum(p.kisyu_m1), m2: getNum(p.kisyu_m2), m24: getNum(p.kisyu_m24)},
           shinki: {m1: getNum(p.shinki_m1), m2: getNum(p.shinki_m2), m24: getNum(p.shinki_m24)},
@@ -459,15 +481,15 @@
       parseCSV(tPlan).forEach(p => {
         let id = p.id || p.ID || `plan_${Math.random()}`;
         let name = p.name || p.名前 || p.名称 || p.プラン名 || id;
-        let price = getNum(p.price || p.料金);
+        let price = getNum(p.price || p.料金 || p.月額);
         dPlan[id] = { name: name, price: price, family: (p.family_ok||p.family)==="1", dcard: (p.dcard_ok||p.dcard)==="1", hikari: (p.hikari_ok||p.hikari)==="1", denki: (p.denki_ok||p.denki)==="1", raw: p };
         mPlanHtml += `<option value="${id}">${name} : ${price.toLocaleString()}円</option>`;
       });
 
       parseCSV(tOpt).forEach(o => {
         let id = o.id || o.ID || `opt_${Math.random()}`;
-        let name = o.name || o.名前 || o.名称 || id;
-        let price = getNum(o.price || o.料金);
+        let name = o.name || o.名前 || o.名称 || o.オプション名 || id;
+        let price = getNum(o.price || o.料金 || o.月額);
         let type = o.type || o.タイプ || "other";
         if(type==="mandatory") mandatoryFeeTotal += price;
         else if(type==="call") mCallHtml += `<option value="${id}" data-price="${price}">${name} (+${price}円)</option>`;
@@ -486,7 +508,7 @@
       parseCSV(tHPlan).forEach(p => {
         let id = p.id || p.ID || `hplan_${Math.random()}`;
         let name = p.name || p.名前 || p.名称 || p.プラン名 || id;
-        let price = getNum(p.price || p.料金);
+        let price = getNum(p.price || p.料金 || p.月額);
         let pType = p.prov_type || p.type || "none";
         hPlan[id] = { name: name, price: price, prov_type: pType, raw: p };
         hPlanHtml += `<option value="${id}">${name} : ${price.toLocaleString()}円</option>`;
@@ -501,8 +523,8 @@
 
       parseCSV(tHOpt).forEach(o => {
         let id = o.id || o.ID || `hopt_${Math.random()}`;
-        let name = o.name || o.名前 || o.名称 || id;
-        let price = getNum(o.price || o.料金);
+        let name = o.name || o.名前 || o.名称 || o.オプション名 || o.サービス名 || id;
+        let price = getNum(o.price || o.料金 || o.月額 || o.金額);
         hOpt.push({id: id, name: name, price: price});
         hOptHtml += `<label class="check-label dyn-hopt" data-price="${price}"><input type="checkbox" onchange="calculate()"> ${name} (+${price}円)</label>`;
       });
@@ -516,13 +538,11 @@
 
       parseCSV(tHDev).forEach(d => {
         let id = d.id || d.ID || `hdev_${Math.random()}`;
-        let name = d.name || d.名前 || d.名称 || d.機器名 || id;
-        
-        // シートの下の方にある空の行を無視する (hdev_0.xxx が表示されるのを防ぐ)
-        if (name === id && !d.price_total && !d.総額) return;
+        let name = d.name || d.名前 || d.名称 || d.機器名 || d.ルーター名 || d.品名 || id;
+        if (name === id && !d.price_total && !d.総額 && !d.金額 && !d.価格) return;
 
         hDev[id] = {
-          name: name, price_total: getNum(d.price_total||d.総額),
+          name: name, price_total: getNum(d.price_total||d.総額||d.価格||d.金額||d.本体価格),
           d12_1: getNum(d.div12_m1||d.d12_1), d12_2: getNum(d.div12_m2||d.d12_2),
           d24_1: getNum(d.div24_m1||d.d24_1), d24_2: getNum(d.div24_m2||d.d24_2),
           d36_1: getNum(d.div36_m1||d.d36_1), d36_2: getNum(d.div36_m2||d.d36_2),
@@ -534,17 +554,14 @@
 
       parseCSV(tHKoji).forEach(k => {
         let id = k.id || k.ID || `hkoji_${Math.random()}`;
-        let name = k.name || k.名前 || k.名称 || k.工事名 || id;
-        
-        // シートの下の方にある空の行を無視する
-        if (name === id && !k.price_total && !k.総額) return;
+        let name = k.name || k.名前 || k.名称 || k.工事名 || k.費用名 || id;
+        if (name === id && !k.price_total && !k.総額 && !k.金額) return;
 
-        let total = getNum(k.price_total || k.総額);
+        let total = getNum(k.price_total || k.総額 || k.料金 || k.金額);
         let d12m1 = getNum(k.d12_m1), d12m2 = getNum(k.d12_m2);
         let d24m1 = getNum(k.d24_m1), d24m2 = getNum(k.d24_m2);
         hKojiHtml += `<label class="check-label dyn-hkoji" data-total="${total}" data-d12m1="${d12m1}" data-d12m2="${d12m2}" data-d24m1="${d24m1}" data-d24m2="${d24m2}"><input type="checkbox" onchange="calculate()"> ${name}</label>`;
       });
-      // ★ここまで
 
       document.getElementById('addMobileBtn').disabled = false;
       document.getElementById('addMobileBtn').innerHTML = '📱 スマホ追加';
@@ -560,12 +577,11 @@
     editingDeviceType = type;
     document.getElementById('deviceModal').style.display = 'flex';
     
+    // ★ モーダルを開くたびに中身を確実にお掃除する
     const sidebar = document.getElementById('modalSidebar');
     sidebar.innerHTML = '';
-
-    // ★前の画面の表示(home 5G等)が残らないように確実にリセットする
     const grid = document.getElementById('modalGrid');
-    grid.innerHTML = ''; 
+    grid.innerHTML = '';
     
     const noneBtn = document.createElement('button');
     noneBtn.className = 'm-cat-btn';
