@@ -235,6 +235,7 @@
       <button class="btn btn-primary no-print" onclick="window.print()">🖨️ 見積印刷</button>
     </div>
     
+    <!-- ★グラフ表示対象を選択する専用UI -->
     <div class="no-print" style="background: #f8f9fa; padding: 12px 16px; border-radius: 12px; border: 1px solid #eee; margin-bottom: 16px;">
       <div style="font-size: 12px; font-weight: bold; color: #555; margin-bottom: 8px;">📊 グラフ・表に表示する回線を選択：</div>
       <div id="graph-line-selectors" style="display: flex; gap: 8px; flex-wrap: wrap;"></div>
@@ -361,7 +362,7 @@
   let editingOptLineId = null; 
   let editingKojiLineId = null; 
 
-  // グラフに表示する回線を管理
+  // ★ グラフに表示する回線を管理
   let lineGraphData = {};
   let graphSelectedLines = new Set();
 
@@ -374,15 +375,8 @@
 
   function parseCSV(text) {
     if (!text) return [];
-    text = text.replace(/^\uFEFF/, '').trim(); 
-    
-    // ★重要: HTMLのログイン画面やエラーコードが返ってきた場合は絶対に無視して安全に保護する
-    if (text.toLowerCase().startsWith('<!doctype') || text.toLowerCase().startsWith('<html')) {
-        console.warn("CSVの代わりにHTMLエラーを受信したためブロックしました。");
-        return [];
-    }
-    
-    const lines = text.split('\n').filter(l => l && !l.match(/^\|?[\s:-]+\|?$/));
+    text = text.replace(/^\uFEFF/, ''); 
+    const lines = text.trim().split('\n').filter(l => l && !l.match(/^\|?[\s:-]+\|?$/));
     if (lines.length < 2) return [];
 
     let delimiter = ',';
@@ -432,45 +426,27 @@
       } catch(e) {}
 
       if (!texts) {
-          const fetchTxt = async (url) => { 
-              if(!url) return ""; 
-              try { 
-                  let r = await fetch(url); 
-                  let t = await r.text(); 
-                  // ★エラーページの場合は空文字を返す
-                  if (t.trim().toLowerCase().startsWith('<!doctype') || t.trim().toLowerCase().startsWith('<html')) return "";
-                  return t;
-              } catch(e) { return ""; } 
-          };
-          
+          const fetchTxt = async (url) => { if(!url) return ""; try { return await (await fetch(url)).text(); } catch(e) { return ""; } };
           texts = await Promise.all([
             fetchTxt(DEVICE_CSV_URL), fetchTxt(PLAN_CSV_URL), fetchTxt(OPTION_CSV_URL), fetchTxt(DISCOUNT_CSV_URL),
             fetchTxt(H_PLAN_URL), fetchTxt(H_PROV_URL), fetchTxt(H_OPT_URL), fetchTxt(H_DISC_URL),
             fetchTxt(H_DEV_URL), fetchTxt(H_KOJI_CSV_URL)
           ]);
-          
-          // 全データが空でない場合のみキャッシュする（エラー時のバグデータ保存を防止）
-          let isDataValid = texts.every(t => t !== "");
-          if (isDataValid) {
-              try { localStorage.setItem(CACHE_KEY, JSON.stringify({ time: Date.now(), data: texts })); } catch(e) {}
-          } else if (texts.every(t => t === "")) {
-              alert("データの読み込みに一時的に失敗しました。時間を置いてから「⬇️ 更新」ボタンを押してください。");
-          }
+          try { localStorage.setItem(CACHE_KEY, JSON.stringify({ time: Date.now(), data: texts })); } catch(e) {}
       }
 
       const [tDev, tPlan, tOpt, tDisc, tHPlan, tHProv, tHOpt, tHDisc, tHDev, tHKoji] = texts;
 
       parseCSV(tDev).forEach(p => {
         let id = p.id || p.ID || `dev_${Math.random()}`;
-        // ★修正: 確実な列名だけを取得し、変なコードを拾わないように安全化
-        let name = p.name || p.名前 || p.名称 || p.機種名 || p.商品名 || id;
-        if(name === id && !p.price_total && !p.総額 && !p.価格) return; 
+        let name = p.name || p.名前 || p.名称 || p.機種名 || id;
+        if(name === id && !p.price_total) return; 
         
         let cat = p.category || p.カテゴリ || "スマホ"; 
         deviceCategories.add(cat);
         
         dDev[id] = {
-          name: name, category: cat, price_total: getNum(p.price_total || p.総額 || p.価格 || p.金額),
+          name: name, category: cat, price_total: getNum(p.price_total || p.総額),
           hoshou_price: getNum(p.hoshou_price), applecare_price: getNum(p.applecare_price), applecare_theft_price: getNum(p.applecare_theft_price),
           kisyu: {m1: getNum(p.kisyu_m1), m2: getNum(p.kisyu_m2), m24: getNum(p.kisyu_m24)},
           shinki: {m1: getNum(p.shinki_m1), m2: getNum(p.shinki_m2), m24: getNum(p.shinki_m24)},
@@ -481,15 +457,15 @@
       parseCSV(tPlan).forEach(p => {
         let id = p.id || p.ID || `plan_${Math.random()}`;
         let name = p.name || p.名前 || p.名称 || p.プラン名 || id;
-        let price = getNum(p.price || p.料金 || p.月額);
+        let price = getNum(p.price || p.料金);
         dPlan[id] = { name: name, price: price, family: (p.family_ok||p.family)==="1", dcard: (p.dcard_ok||p.dcard)==="1", hikari: (p.hikari_ok||p.hikari)==="1", denki: (p.denki_ok||p.denki)==="1", raw: p };
         mPlanHtml += `<option value="${id}">${name} : ${price.toLocaleString()}円</option>`;
       });
 
       parseCSV(tOpt).forEach(o => {
         let id = o.id || o.ID || `opt_${Math.random()}`;
-        let name = o.name || o.名前 || o.名称 || o.オプション名 || id;
-        let price = getNum(o.price || o.料金 || o.月額);
+        let name = o.name || o.名前 || o.名称 || id;
+        let price = getNum(o.price || o.料金);
         let type = o.type || o.タイプ || "other";
         if(type==="mandatory") mandatoryFeeTotal += price;
         else if(type==="call") mCallHtml += `<option value="${id}" data-price="${price}">${name} (+${price}円)</option>`;
@@ -508,7 +484,7 @@
       parseCSV(tHPlan).forEach(p => {
         let id = p.id || p.ID || `hplan_${Math.random()}`;
         let name = p.name || p.名前 || p.名称 || p.プラン名 || id;
-        let price = getNum(p.price || p.料金 || p.月額);
+        let price = getNum(p.price || p.料金);
         let pType = p.prov_type || p.type || "none";
         hPlan[id] = { name: name, price: price, prov_type: pType, raw: p };
         hPlanHtml += `<option value="${id}">${name} : ${price.toLocaleString()}円</option>`;
@@ -523,8 +499,8 @@
 
       parseCSV(tHOpt).forEach(o => {
         let id = o.id || o.ID || `hopt_${Math.random()}`;
-        let name = o.name || o.名前 || o.名称 || o.オプション名 || o.サービス名 || id;
-        let price = getNum(o.price || o.料金 || o.月額 || o.金額);
+        let name = o.name || o.名前 || o.名称 || id;
+        let price = getNum(o.price || o.料金);
         hOpt.push({id: id, name: name, price: price});
         hOptHtml += `<label class="check-label dyn-hopt" data-price="${price}"><input type="checkbox" onchange="calculate()"> ${name} (+${price}円)</label>`;
       });
@@ -538,11 +514,9 @@
 
       parseCSV(tHDev).forEach(d => {
         let id = d.id || d.ID || `hdev_${Math.random()}`;
-        let name = d.name || d.名前 || d.名称 || d.機器名 || d.ルーター名 || d.品名 || id;
-        if (name === id && !d.price_total && !d.総額 && !d.金額 && !d.価格) return;
-
+        let name = d.name || d.名前 || d.名称 || d.機器名 || id;
         hDev[id] = {
-          name: name, price_total: getNum(d.price_total||d.総額||d.価格||d.金額||d.本体価格),
+          name: name, price_total: getNum(d.price_total||d.総額),
           d12_1: getNum(d.div12_m1||d.d12_1), d12_2: getNum(d.div12_m2||d.d12_2),
           d24_1: getNum(d.div24_m1||d.d24_1), d24_2: getNum(d.div24_m2||d.d24_2),
           d36_1: getNum(d.div36_m1||d.d36_1), d36_2: getNum(d.div36_m2||d.d36_2),
@@ -554,10 +528,8 @@
 
       parseCSV(tHKoji).forEach(k => {
         let id = k.id || k.ID || `hkoji_${Math.random()}`;
-        let name = k.name || k.名前 || k.名称 || k.工事名 || k.費用名 || id;
-        if (name === id && !k.price_total && !k.総額 && !k.金額) return;
-
-        let total = getNum(k.price_total || k.総額 || k.料金 || k.金額);
+        let name = k.name || k.名前 || k.名称 || k.工事名 || id;
+        let total = getNum(k.price_total || k.総額);
         let d12m1 = getNum(k.d12_m1), d12m2 = getNum(k.d12_m2);
         let d24m1 = getNum(k.d24_m1), d24m2 = getNum(k.d24_m2);
         hKojiHtml += `<label class="check-label dyn-hkoji" data-total="${total}" data-d12m1="${d12m1}" data-d12m2="${d12m2}" data-d24m1="${d24m1}" data-d24m2="${d24m2}"><input type="checkbox" onchange="calculate()"> ${name}</label>`;
@@ -577,11 +549,8 @@
     editingDeviceType = type;
     document.getElementById('deviceModal').style.display = 'flex';
     
-    // ★ モーダルを開くたびに中身を確実にお掃除する
     const sidebar = document.getElementById('modalSidebar');
     sidebar.innerHTML = '';
-    const grid = document.getElementById('modalGrid');
-    grid.innerHTML = '';
     
     const noneBtn = document.createElement('button');
     noneBtn.className = 'm-cat-btn';
@@ -881,6 +850,7 @@
     }
   }
 
+  // ★ グラフに表示する回線のチェックボタンを生成する関数
   function renderGraphToggles() {
     const gContainer = document.getElementById('graph-line-selectors');
     if (!gContainer) return;
@@ -891,6 +861,7 @@
 
     let allSelected = Array.from(lines).every(l => graphSelectedLines.has(l.id));
 
+    // 全回線ボタン
     const allBtn = document.createElement('div');
     allBtn.className = `graph-toggle-btn ${allSelected ? 'active' : ''}`;
     allBtn.innerText = allSelected ? '☑ 全回線' : '☐ 全回線';
@@ -905,6 +876,7 @@
     };
     gContainer.appendChild(allBtn);
 
+    // 各回線ボタン
     lines.forEach((line, index) => {
       const isFixed = line.getAttribute("data-type") === "fixed";
       const title = isFixed ? `🌐 ${index + 1}回線目` : `📱 ${index + 1}回線目`;
@@ -1167,6 +1139,7 @@
     document.getElementById('linesContainer').appendChild(div);
     activeLineId = lineId;
     
+    // ★ 追加された回線は自動的にグラフ表示対象にする
     graphSelectedLines.add(lineId);
 
     if(type==='fixed') updateHProv(lineId);
@@ -1221,6 +1194,7 @@
     let el = document.getElementById(id);
     if(el) el.remove();
     
+    // ★ グラフ表示データからも削除
     graphSelectedLines.delete(id);
     delete lineGraphData[id];
 
@@ -1237,6 +1211,7 @@
     document.getElementById("linesContainer").innerHTML = "";
     lineCounter = 0; activeLineId = null;
     
+    // ★ グラフ表示データもクリア
     graphSelectedLines.clear();
     lineGraphData = {};
     
@@ -1254,6 +1229,7 @@
     });
   }
 
+  // ★ グラフ表示を専用で更新する関数
   function updateGraph() {
     let arrP = new Array(48).fill(0);
     let arrD = new Array(48).fill(0);
@@ -1296,6 +1272,7 @@
       const type = block.getAttribute("data-type");
       let lM2 = 0; let lineAdminFee = 4950; 
       
+      // ★ この回線の推移データを一時保存する配列
       let lineArrP = new Array(48).fill(0);
       let lineArrD = new Array(48).fill(0);
 
@@ -1458,10 +1435,11 @@
 
           let dv=0; if(m===1)dv=d1; else if(m<=23)dv=d2; else if(m===24)dv=d24;
           lineArrD[m-1] = dv;
-          
+
           if(m===2){ lM2 = pFinal+dv; grandM2 += lM2; }
         }
         
+        // ★ 回線ごとの推移をデータ保存
         lineGraphData[block.id] = { p: lineArrP, d: lineArrD, aFee: lineAdminFee };
 
         if(block.querySelector('.line-final-total')) block.querySelector('.line-final-total').innerText = lM2.toLocaleString();
@@ -1747,6 +1725,7 @@
            if(m===2){ lM2 = pFinal+dv; grandM2 += lM2; }
         }
         
+        // ★ 回線ごとの推移をデータ保存
         lineGraphData[block.id] = { p: lineArrP, d: lineArrD, aFee: lineAdminFee };
 
         if(block.querySelector('.line-final-total')) block.querySelector('.line-final-total').innerText = lM2.toLocaleString();
@@ -1761,6 +1740,7 @@
     let displayPrice = currentDisplayMode === 'all' ? grandM2 : singleActiveM2;
     if(document.getElementById("grandTotalDisplay")) document.getElementById("grandTotalDisplay").innerText = displayPrice.toLocaleString();
 
+    // ★ グラフ側も連動して更新
     updateGraph();
   }
 
