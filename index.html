@@ -328,8 +328,11 @@
   window.openKojiModal = openKojiModal;
   window.closeKojiModal = closeKojiModal;
   
-  // ★ バージョンを「v7」に変更してキャッシュをリセット
-  const CACHE_KEY_NEW = "docomo_sim_cache_v7";
+  // ★ デプロイしたAPIのURLを設定
+  const GAS_API_URL = "https://script.google.com/macros/s/AKfycbwB_-7ulQbtFFc16NjgbvoOM7SzCVJ-OGtKFuBZF0AZoL2cG-WEvSJiy3ea2IJBYMzE/exec";
+  
+  // ★ バージョンを更新して強制リセット
+  const CACHE_KEY_NEW = "docomo_sim_cache_v9";
 
   window.forceFetchData = function() {
       if(confirm("スプレッドシートの最新データを読み込みますか？")) {
@@ -337,17 +340,6 @@
           location.reload();
       }
   };
-
-  const DEVICE_CSV_URL   = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSxkg_tTd2f_kAcqtH7hXHPq5zbSm-fOHRh3T3ZNAho31pmmGxhhnbbFxqojwDz3j5sRQfB2EZrmMPr/pub?gid=0&single=true&output=csv"; 
-  const PLAN_CSV_URL     = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSxkg_tTd2f_kAcqtH7hXHPq5zbSm-fOHRh3T3ZNAho31pmmGxhhnbbFxqojwDz3j5sRQfB2EZrmMPr/pub?gid=1240444955&single=true&output=csv"; 
-  const OPTION_CSV_URL   = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSxkg_tTd2f_kAcqtH7hXHPq5zbSm-fOHRh3T3ZNAho31pmmGxhhnbbFxqojwDz3j5sRQfB2EZrmMPr/pub?gid=585324112&single=true&output=csv"; 
-  const DISCOUNT_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSxkg_tTd2f_kAcqtH7hXHPq5zbSm-fOHRh3T3ZNAho31pmmGxhhnbbFxqojwDz3j5sRQfB2EZrmMPr/pub?gid=7262986&single=true&output=csv"; 
-  const H_PLAN_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSxkg_tTd2f_kAcqtH7hXHPq5zbSm-fOHRh3T3ZNAho31pmmGxhhnbbFxqojwDz3j5sRQfB2EZrmMPr/pub?gid=117037676&single=true&output=csv";
-  const H_PROV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSxkg_tTd2f_kAcqtH7hXHPq5zbSm-fOHRh3T3ZNAho31pmmGxhhnbbFxqojwDz3j5sRQfB2EZrmMPr/pub?gid=1826250395&single=true&output=csv";
-  const H_OPT_URL  = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSxkg_tTd2f_kAcqtH7hXHPq5zbSm-fOHRh3T3ZNAho31pmmGxhhnbbFxqojwDz3j5sRQfB2EZrmMPr/pub?gid=1143788577&single=true&output=csv";
-  const H_DISC_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSxkg_tTd2f_kAcqtH7hXHPq5zbSm-fOHRh3T3ZNAho31pmmGxhhnbbFxqojwDz3j5sRQfB2EZrmMPr/pub?gid=843369484&single=true&output=csv";
-  const H_DEV_URL  = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSxkg_tTd2f_kAcqtH7hXHPq5zbSm-fOHRh3T3ZNAho31pmmGxhhnbbFxqojwDz3j5sRQfB2EZrmMPr/pub?gid=1561318585&single=true&output=csv";
-  const H_KOJI_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSxkg_tTd2f_kAcqtH7hXHPq5zbSm-fOHRh3T3ZNAho31pmmGxhhnbbFxqojwDz3j5sRQfB2EZrmMPr/pub?gid=1393674300&single=true&output=csv"; 
 
   let dDev={}, dOpt=[], dPlan={}, dDisc=[];
   let hPlan={}, hProv=[], hOpt=[], hDisc=[], hDev={}, hKoji=[];
@@ -377,42 +369,12 @@
   let hPlanHtml = `<option value="none">未選択</option>`, hDevHtml = `<option value="none">機器なし / その他</option>`;
   let hOptHtml = ``, hCpHtml = ``, hKojiHtml = ``;
 
-  function parseCSV(text) {
-    if (!text) return [];
-    text = text.replace(/^\uFEFF/, '').trim();
-    
-    if (text.toLowerCase().startsWith('<!doctype') || text.toLowerCase().startsWith('<html')) {
-        return [];
-    }
-    
-    const lines = text.split('\n').filter(l => l && !l.match(/^\|?[\s:-]+\|?$/));
-    if (lines.length < 2) return [];
-
-    let delimiter = ',';
-    if (lines[0].includes('\t')) delimiter = '\t';
-    if (lines[0].includes('|') && !lines[0].includes(',')) delimiter = '|';
-
-    const splitRow = (str) => {
-        let arr = []; let cur = ''; let inQ = false;
-        for(let i=0; i<str.length; i++) {
-            let c = str[i];
-            if(c === '"') { inQ = !inQ; }
-            else if(c === delimiter && !inQ) { arr.push(cur.trim()); cur = ''; }
-            else { cur += c; }
-        }
-        arr.push(cur.trim());
-        if(delimiter === '|' && arr[0] === '') arr.shift();
-        if(delimiter === '|' && arr[arr.length-1] === '') arr.pop();
-        return arr;
-    };
-
-    const rawHeaders = splitRow(lines[0]);
-    const headers = rawHeaders.map(h => h.replace(/[\uFEFF\u200B\*\s"']/g, '').toLowerCase().replace(/ｉ/g, 'i').replace(/ｄ/g, 'd'));
-
-    return lines.slice(1).map(line => {
-       const vals = splitRow(line);
+  function parseArray(arr) {
+    if (!arr || arr.length < 2) return [];
+    const headers = arr[0].map(h => String(h).replace(/[\uFEFF\u200B\*\s"']/g, '').toLowerCase().replace(/ｉ/g, 'i').replace(/ｄ/g, 'd'));
+    return arr.slice(1).map(row => {
        let obj = {};
-       headers.forEach((h, idx) => { obj[h] = vals[idx] || ""; });
+       headers.forEach((h, idx) => { obj[h] = String(row[idx] || "").trim(); });
        return obj;
     }).filter(obj => Object.keys(obj).some(k => obj[k] !== ""));
   }
@@ -420,67 +382,55 @@
   const getNum = (val) => Number(String(val).replace(/[,円回]/g, '').trim()) || 0;
 
   async function init() {
+    if (GAS_API_URL === "ここにURLを貼り付けます") {
+        alert("GASのWebアプリURLが設定されていません。コード内の GAS_API_URL を書き換えてください。");
+        document.getElementById('addMobileBtn').innerHTML = '⚠️ URL未設定';
+        document.getElementById('addFixedBtn').innerHTML = '⚠️ URL未設定';
+        return;
+    }
+
     try {
-      let texts = null;
+      let dataObj = null;
       
       try {
           let cached = localStorage.getItem(CACHE_KEY_NEW);
           if (cached) {
               let parsed = JSON.parse(cached);
               if (Date.now() - parsed.time < 12 * 60 * 60 * 1000) {
-                  texts = parsed.data;
+                  dataObj = parsed.data;
               }
           }
       } catch(e) {}
 
-      if (!texts) {
-          // ★ 変更点：Googleに負荷をかけないように、かつタイムアウトでフリーズを防止
-          const fetchTxt = async (url) => { 
-              if(!url) return ""; 
-              try { 
-                  // 10秒でタイムアウトさせる設定
-                  const controller = new AbortController();
-                  const timeoutId = setTimeout(() => controller.abort(), 10000);
-                  
-                  let res = await fetch(url, { signal: controller.signal });
-                  clearTimeout(timeoutId);
-                  
-                  let text = await res.text();
-                  if (text.trim().toLowerCase().startsWith('<!doctype') || text.trim().toLowerCase().startsWith('<html')) return "";
-                  return text;
-              } catch(e) { return ""; } 
-          };
-          
-          const urls = [
-            DEVICE_CSV_URL, PLAN_CSV_URL, OPTION_CSV_URL, DISCOUNT_CSV_URL,
-            H_PLAN_URL, H_PROV_URL, H_OPT_URL, H_DISC_URL, H_DEV_URL, H_KOJI_CSV_URL
-          ];
-          
-          texts = [];
-          let mBtn = document.getElementById('addMobileBtn');
-          let fBtn = document.getElementById('addFixedBtn');
+      if (!dataObj) {
+          document.getElementById('addMobileBtn').innerHTML = '⏳ 爆速読込中...';
+          document.getElementById('addFixedBtn').innerHTML = '⏳ 爆速読込中...';
 
-          // ★ 変更点：10個同時にリクエストせず、3個ずつ順番にリクエストする（詰まり解消）
-          for (let i = 0; i < urls.length; i += 3) {
-              // ボタンの文字を進捗状況に変更
-              mBtn.innerHTML = `⏳ 読込中... (${i}/${urls.length})`;
-              fBtn.innerHTML = `⏳ 読込中... (${i}/${urls.length})`;
-              
-              const chunk = urls.slice(i, i + 3);
-              const results = await Promise.all(chunk.map(url => fetchTxt(url)));
-              texts.push(...results);
-          }
-          
-          if (texts.every(t => t.length > 0)) {
-              try { localStorage.setItem(CACHE_KEY_NEW, JSON.stringify({ time: Date.now(), data: texts })); } catch(e) {}
-          } else {
-              alert("通信が不安定なため、データの読み込みに一部失敗しました。\n画面右上の「⬇️ 更新」ボタンを何度かお試しください。");
+          try {
+              let res = await fetch(GAS_API_URL);
+              dataObj = await res.json();
+              if(dataObj) {
+                  localStorage.setItem(CACHE_KEY_NEW, JSON.stringify({ time: Date.now(), data: dataObj }));
+              }
+          } catch(e) {
+              alert("データの取得に失敗しました。URLが正しいか、または「全員」に公開されているか確認してください。");
+              return;
           }
       }
 
-      const [tDev, tPlan, tOpt, tDisc, tHPlan, tHProv, tHOpt, tHDisc, tHDev, tHKoji] = texts;
+      // ★ スプレッドシートのID(gid)を指定してデータを割り当てる（1回の通信で全部完了！）
+      const tDev = parseArray(dataObj["0"]);
+      const tPlan = parseArray(dataObj["1240444955"]);
+      const tOpt = parseArray(dataObj["585324112"]);
+      const tDisc = parseArray(dataObj["7262986"]);
+      const tHPlan = parseArray(dataObj["117037676"]);
+      const tHProv = parseArray(dataObj["1826250395"]);
+      const tHOpt = parseArray(dataObj["1143788577"]);
+      const tHDisc = parseArray(dataObj["843369484"]);
+      const tHDev = parseArray(dataObj["1561318585"]);
+      const tHKoji = parseArray(dataObj["1393674300"]);
 
-      parseCSV(tDev).forEach(p => {
+      tDev.forEach(p => {
         let id = p.id || p.ID || `dev_${Math.random()}`;
         let name = p.name || p.名前 || p.名称 || p.機種名 || id;
         if(name === id && !p.price_total) return; 
@@ -497,7 +447,7 @@
         };
       });
 
-      parseCSV(tPlan).forEach(p => {
+      tPlan.forEach(p => {
         let id = p.id || p.ID || `plan_${Math.random()}`;
         let name = p.name || p.名前 || p.名称 || p.プラン名 || id;
         let price = getNum(p.price || p.料金);
@@ -505,7 +455,7 @@
         mPlanHtml += `<option value="${id}">${name} : ${price.toLocaleString()}円</option>`;
       });
 
-      parseCSV(tOpt).forEach(o => {
+      tOpt.forEach(o => {
         let id = o.id || o.ID || `opt_${Math.random()}`;
         let name = o.name || o.名前 || o.名称 || id;
         let price = getNum(o.price || o.料金);
@@ -521,14 +471,14 @@
         else if(type==="special") mSpHtml += `<label class="check-label special-opt" data-price="${price}"><input type="checkbox" onchange="calculate()"> <span style="color:#cc0000; font-weight:bold;">${name}</span></label>`;
       });
 
-      parseCSV(tDisc).forEach(d => {
+      tDisc.forEach(d => {
         let id = d.id || d.ID || `disc_${Math.random()}`;
         let name = d.name || d.名前 || d.名称 || d.キャンペーン名 || id;
         dDisc.push({id: id, name: name, duration: getNum(d.duration || d.期間)});
         mCpHtml += `<label class="check-label camp-opt camp-opt-${id}"><input type="checkbox" onchange="calculate()"><span style="color:#cc0000; font-weight:bold;">${name}</span></label>`;
       });
 
-      parseCSV(tHPlan).forEach(p => {
+      tHPlan.forEach(p => {
         let id = p.id || p.ID || `hplan_${Math.random()}`;
         let name = p.name || p.名前 || p.名称 || p.プラン名 || id;
         let price = getNum(p.price || p.料金);
@@ -537,14 +487,14 @@
         hPlanHtml += `<option value="${id}">${name} : ${price.toLocaleString()}円</option>`;
       });
 
-      parseCSV(tHProv).forEach(p => {
+      tHProv.forEach(p => {
         let id = p.id || p.ID || `hprov_${Math.random()}`;
         let name = p.name || p.名前 || p.プロバイダ名 || id;
         let pType = p.prov_type || p.type || "none";
         hProv.push({id: id, name: name, prov_type: pType});
       });
 
-      parseCSV(tHOpt).forEach(o => {
+      tHOpt.forEach(o => {
         let id = o.id || o.ID || `hopt_${Math.random()}`;
         let name = o.name || o.名前 || o.名称 || id;
         let price = getNum(o.price || o.料金);
@@ -558,14 +508,14 @@
         }
       });
 
-      parseCSV(tHDisc).forEach(d => {
+      tHDisc.forEach(d => {
         let id = d.id || d.ID || `hdisc_${Math.random()}`;
         let name = d.name || d.名前 || d.名称 || d.キャンペーン名 || id;
         hDisc.push({id: id, name: name, price: getNum(d.price || d.割引額 || d.割引 || d.val || d.value || d.金額), duration: getNum(d.duration || d.期間 || d.times)});
         hCpHtml += `<label class="check-label hcamp-opt hcamp-opt-${id}"><input type="checkbox" onchange="calculate()"><span style="color:#cc0000; font-weight:bold;">${name}</span></label>`;
       });
 
-      parseCSV(tHDev).forEach(d => {
+      tHDev.forEach(d => {
         let id = d.id || d.ID || `hdev_${Math.random()}`;
         let name = d.name || d.名前 || d.名称 || d.機器名 || id;
         if (name === id && !d.price_total && !d.総額 && !d.金額 && !d.価格) return;
@@ -581,7 +531,7 @@
         hDevHtml += `<option value="${id}">${name}</option>`;
       });
 
-      parseCSV(tHKoji).forEach(k => {
+      tHKoji.forEach(k => {
         let id = k.id || k.ID || `hkoji_${Math.random()}`;
         let name = k.name || k.名前 || k.名称 || k.工事名 || k.費用名 || id;
         if (name === id && !k.price_total && !k.総額 && !k.金額) return;
