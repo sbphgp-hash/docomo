@@ -328,11 +328,10 @@
   window.openKojiModal = openKojiModal;
   window.closeKojiModal = closeKojiModal;
   
-  // ★ デプロイしたAPIのURLを設定
   const GAS_API_URL = "https://script.google.com/macros/s/AKfycbwB_-7ulQbtFFc16NjgbvoOM7SzCVJ-OGtKFuBZF0AZoL2cG-WEvSJiy3ea2IJBYMzE/exec";
   
   // ★ バージョンを更新して強制リセット
-  const CACHE_KEY_NEW = "docomo_sim_cache_v9";
+  const CACHE_KEY_NEW = "docomo_sim_cache_v10";
 
   window.forceFetchData = function() {
       if(confirm("スプレッドシートの最新データを読み込みますか？")) {
@@ -418,7 +417,6 @@
           }
       }
 
-      // ★ スプレッドシートのID(gid)を指定してデータを割り当てる（1回の通信で全部完了！）
       const tDev = parseArray(dataObj["0"]);
       const tPlan = parseArray(dataObj["1240444955"]);
       const tOpt = parseArray(dataObj["585324112"]);
@@ -455,6 +453,7 @@
         mPlanHtml += `<option value="${id}">${name} : ${price.toLocaleString()}円</option>`;
       });
 
+      // ★ スマホのオプション処理 (MAX特典を識別するクラスを付与)
       tOpt.forEach(o => {
         let id = o.id || o.ID || `opt_${Math.random()}`;
         let name = o.name || o.名前 || o.名称 || id;
@@ -467,8 +466,12 @@
         else if(type==="mandatory") mandatoryFeeTotal += price;
         else if(type==="call") mCallHtml += `<option value="${id}" data-price="${price}">${name} (+${price}円)</option>`;
         else if(type==="hoshou") mHoshouHtml += `<option value="${id}" data-price="${price}">${name} (+${price}円)</option>`;
-        else if(type==="other") mOtherHtml += `<label class="check-label dyn-other-opt" data-price="${price}"><input type="checkbox" onchange="calculate()"> ${name}</label>`;
         else if(type==="special") mSpHtml += `<label class="check-label special-opt" data-price="${price}"><input type="checkbox" onchange="calculate()"> <span style="color:#cc0000; font-weight:bold;">${name}</span></label>`;
+        else {
+            // max_free_opt の場合は専用クラスをつける
+            let addClass = type === "max_free_opt" ? "max-free-opt" : "";
+            mOtherHtml += `<label class="check-label dyn-other-opt ${addClass}" data-price="${price}"><input type="checkbox" onchange="calculate()"> ${name}</label>`;
+        }
       });
 
       tDisc.forEach(d => {
@@ -1383,8 +1386,51 @@
           else if(hSel.value==="applecare_theft"&&dDev[devId]) pTot+=dDev[devId].applecare_theft_price;
           else pTot+=Number(hSel.options[hSel.selectedIndex].getAttribute("data-price"));
         }
-        block.querySelectorAll('.dyn-other-opt input:checked, .special-opt input:checked').forEach(cb=>pTot+=Number(cb.closest('.check-label').getAttribute("data-price")));
-        if(block.querySelector('.col-total-plan')) block.querySelector('.col-total-plan').innerText = pTot.toLocaleString();
+
+        // ★ MAXプランの割引計算ロジック
+        let maxOptPrices = [];
+        let isMaxPlan = pObj.name && (pObj.name.toUpperCase().includes("MAX") || pObj.name.includes("ＭＡＸ"));
+
+        block.querySelectorAll('.dyn-other-opt input:checked, .special-opt input:checked').forEach(cb => {
+            let lbl = cb.closest('.check-label');
+            let price = Number(lbl.getAttribute("data-price"));
+            pTot += price;
+            
+            // MAX対象のオプションなら料金を記録
+            if (isMaxPlan && lbl.classList.contains("max-free-opt")) {
+                maxOptPrices.push(price);
+            }
+        });
+
+        // 高い順に並び替え、最大2つまで無料（マイナス）にする
+        let freeAmount = 0;
+        if (maxOptPrices.length > 0) {
+            maxOptPrices.sort((a, b) => b - a);
+            if (maxOptPrices.length > 0) freeAmount += maxOptPrices[0];
+            if (maxOptPrices.length > 1) freeAmount += maxOptPrices[1];
+            pTot -= freeAmount;
+        }
+
+        let planOpFooterSpan = block.querySelector('.col-total-plan');
+        if (planOpFooterSpan) {
+            planOpFooterSpan.innerText = pTot.toLocaleString();
+            let footerDiv = planOpFooterSpan.parentElement;
+            let noteNode = footerDiv.querySelector('.max-discount-note');
+            
+            // 無料になった金額を赤字で注釈表示
+            if (freeAmount > 0) {
+                if (!noteNode) {
+                    let note = document.createElement('div');
+                    note.className = 'max-discount-note';
+                    note.style = "font-size:11px; color:#cc0000; margin-top:4px;";
+                    footerDiv.appendChild(note);
+                    noteNode = note;
+                }
+                noteNode.innerText = `※MAXプラン特典: -${freeAmount.toLocaleString()}円`;
+            } else {
+                if (noteNode) noteNode.remove();
+            }
+        }
 
         const famV = parseInt(block.querySelector('.familySelect')?.value || 0);
         const hikV = block.querySelector('.hikariCheck input')?.checked ? 1210 : 0;
