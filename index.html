@@ -328,10 +328,11 @@
   window.openKojiModal = openKojiModal;
   window.closeKojiModal = closeKojiModal;
   
-  const GAS_API_URL = "https://script.google.com/macros/s/AKfycbwB_-7ulQbtFFc16NjgbvoOM7SzCVJ-OGtKFuBZF0AZoL2cG-WEvSJiy3ea2IJBYMzE/exec";
+  // ★ 新しいAPIのURL
+  const GAS_API_URL = "https://script.google.com/macros/s/AKfycbwGhvnQRPdMxyj0OLLGVvUw82H364JygbjyV4EdRHHz7jQdFmCdtvnBFoT1mcDIXwRh/exec";
   
   // ★ バージョンを更新して強制リセット
-  const CACHE_KEY_NEW = "docomo_sim_cache_v10";
+  const CACHE_KEY_NEW = "docomo_sim_cache_v11";
 
   window.forceFetchData = function() {
       if(confirm("スプレッドシートの最新データを読み込みますか？")) {
@@ -453,7 +454,6 @@
         mPlanHtml += `<option value="${id}">${name} : ${price.toLocaleString()}円</option>`;
       });
 
-      // ★ スマホのオプション処理 (MAX特典を識別するクラスを付与)
       tOpt.forEach(o => {
         let id = o.id || o.ID || `opt_${Math.random()}`;
         let name = o.name || o.名前 || o.名称 || id;
@@ -468,7 +468,6 @@
         else if(type==="hoshou") mHoshouHtml += `<option value="${id}" data-price="${price}">${name} (+${price}円)</option>`;
         else if(type==="special") mSpHtml += `<label class="check-label special-opt" data-price="${price}"><input type="checkbox" onchange="calculate()"> <span style="color:#cc0000; font-weight:bold;">${name}</span></label>`;
         else {
-            // max_free_opt の場合は専用クラスをつける
             let addClass = type === "max_free_opt" ? "max-free-opt" : "";
             mOtherHtml += `<label class="check-label dyn-other-opt ${addClass}" data-price="${price}"><input type="checkbox" onchange="calculate()"> ${name}</label>`;
         }
@@ -1387,7 +1386,6 @@
           else pTot+=Number(hSel.options[hSel.selectedIndex].getAttribute("data-price"));
         }
 
-        // ★ MAXプランの割引計算ロジック
         let maxOptPrices = [];
         let isMaxPlan = pObj.name && (pObj.name.toUpperCase().includes("MAX") || pObj.name.includes("ＭＡＸ"));
 
@@ -1396,13 +1394,11 @@
             let price = Number(lbl.getAttribute("data-price"));
             pTot += price;
             
-            // MAX対象のオプションなら料金を記録
             if (isMaxPlan && lbl.classList.contains("max-free-opt")) {
                 maxOptPrices.push(price);
             }
         });
 
-        // 高い順に並び替え、最大2つまで無料（マイナス）にする
         let freeAmount = 0;
         if (maxOptPrices.length > 0) {
             maxOptPrices.sort((a, b) => b - a);
@@ -1417,7 +1413,6 @@
             let footerDiv = planOpFooterSpan.parentElement;
             let noteNode = footerDiv.querySelector('.max-discount-note');
             
-            // 無料になった金額を赤字で注釈表示
             if (freeAmount > 0) {
                 if (!noteNode) {
                     let note = document.createElement('div');
