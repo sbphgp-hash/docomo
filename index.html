@@ -14,7 +14,7 @@
   .btn:disabled { opacity: 0.6; cursor: not-allowed; }
   .btn-primary { background: #cc0000; color: #fff; border: none; }
   .btn-primary:hover:not(:disabled) { background: #aa0000; }
-  .tab-bar-container { padding: 12px 16px 0 16px; max-width: 1400px; margin: 0 auto; }
+  .tab-bar-container { padding: 12px 16px 0 16px; max-width: 1400px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; }
   .tab-bar { display: inline-flex; background: #e4e6eb; padding: 4px; border-radius: 10px; gap: 4px; overflow-x: auto; max-width: 100%; }
   .tab-btn { padding: 8px 16px; background: transparent; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; color: #666; font-size: 13px; transition: all 0.2s ease; white-space: nowrap; display: inline-flex; align-items: center; }
   .tab-btn.active { background: #ffffff; color: #cc0000; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
@@ -44,7 +44,7 @@
   .form-label { display: block; font-size: 11px; color: #555; margin-bottom: 4px; font-weight: bold; }
   select, input[type="number"] { width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 13px; box-sizing: border-box; background: #fdfdfd; transition: border 0.2s; }
   select:focus, input[type="number"]:focus { border-color: #cc0000; outline: none; }
-  .check-label { display: none; } /* オプション一覧はポップアップ化するため非表示 */
+  .check-label { display: none; }
 
   .graph-toggle-btn { padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: bold; cursor: pointer; border: 2px solid #ddd; background: #fff; color: #555; transition: all 0.2s; display: inline-flex; align-items: center; gap: 4px; }
   .graph-toggle-btn:hover { background: #f8f9fa; border-color: #ccc; }
@@ -95,21 +95,33 @@
 
   @media (max-width: 900px) { .two-columns { flex-direction: column; } .col-left { flex-direction: column; width: 100%; } .col-right { width: 100%; } }
 
-  /* 印刷（PDF出力）用の美しいレイアウト設定 */
+  /* ✨ 印刷（PDF出力）用の美しいレイアウト設定 ✨ */
   @media print {
     @page { size: landscape; margin: 10mm; }
     body { background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    .top-nav, .bottom-bar, .no-print { display: none !important; }
+    
+    /* 印刷時に消す要素たち（ナビ、ボトムバー、印刷/変更/削除ボタンなど） */
+    .top-nav, .bottom-bar, .no-print, .btn-delete-line, .tab-close-btn { display: none !important; }
+    
     .view-container { padding: 0 !important; }
     .view-container:not(.view-active) { display: none !important; }
     .view-container.view-active { display: block !important; }
+    
     .sticky-summary { position: static !important; border: 2px solid #cc0000 !important; }
     .section-body { overflow: visible !important; height: auto !important; }
-    .btn { display: none !important; }
+    
+    /* 選択中のタブ（〇回線目）だけタイトルとして綺麗に残す */
+    .tab-bar-container { padding: 0 0 16px 0 !important; margin: 0 !important; }
     .tab-btn:not(.active) { display: none !important; }
-    .tab-btn.active { display: inline-block !important; border: 2px solid #cc0000; background: #fff0f5 !important; }
-    select { appearance: none; -webkit-appearance: none; border: none; background: transparent; padding: 0; font-weight: bold; }
-    .section-card { break-inside: avoid; }
+    .tab-btn.active { display: inline-block !important; border: 2px solid #cc0000 !important; background: #fff0f5 !important; font-size: 16px !important; padding: 12px 24px !important; }
+    
+    /* セレクトボックスや入力欄の枠線を消してスッキリ見せる */
+    select, input[type="number"] { appearance: none; -webkit-appearance: none; border: none !important; background: transparent !important; padding: 0 !important; font-weight: bold; color: #333; }
+    input[type="number"] { text-align: right; }
+    
+    /* カードのデザインを見積書っぽく調整 */
+    .section-card { break-inside: avoid; border: 1px solid #ccc !important; box-shadow: none !important; }
+    .form-group > div[style*="border"] { border: none !important; padding: 0 !important; background: transparent !important; }
   }
 </style>
 
@@ -134,10 +146,13 @@
       <h2>上のボタンから回線を追加してください</h2>
       <p>スマホのみ、光のみ、または両方の合算シミュレーションが可能です。</p>
     </div>
-    <div class="tab-bar-container" id="tabBarContainer" style="display:none; justify-content:space-between; align-items:center;">
+    
+    <!-- ✨ 入力画面用：タブエリア ＋ 印刷ボタン ✨ -->
+    <div class="tab-bar-container" id="tabBarContainer" style="display:none;">
       <div class="tab-bar" id="tabBar"></div>
-      <button class="btn no-print" style="border:2px solid #cc0000; color:#cc0000; font-weight:bold; background:#fff;" onclick="window.print()">🖨️ この画面を印刷</button>
+      <button class="btn no-print" style="border:2px solid #cc0000; color:#cc0000; font-weight:bold; background:#fff; padding:6px 16px; font-size:14px;" onclick="window.print()">🖨️ この画面を印刷</button>
     </div>
+    
     <div id="linesContainer" style="margin-top:16px;"></div>
   </div>
 
@@ -228,7 +243,6 @@
   window.closeMultiModal = closeMultiModal;
   window.toggleMultiItem = toggleMultiItem;
 
-  // ★ 岸田さんが作られた完璧なGAS APIを完全復元！
   const GAS_API_URL = "https://script.google.com/macros/s/AKfycbwGhvnQRPdMxyj0OLLGVvUw82H364JygbjyV4EdRHHz7jQdFmCdtvnBFoT1mcDIXwRh/exec";
 
   let dDev={}, dOpt=[], dPlan={}, dDisc=[];
@@ -339,7 +353,7 @@
         let id = d.id || d.ID || `disc_${Math.random()}`;
         let name = d.name || d.名前 || d.名称 || d.キャンペーン名 || id;
         dDisc.push({id: id, name: name, duration: getNum(d.duration || d.期間)});
-        mCpHtml += `<label class="check-label camp-opt camp-opt-${id}" style="display:flex;"><input type="checkbox" onchange="calculate()"><span style="color:#cc0000; font-weight:bold;">${name}</span></label>`;
+        mCpHtml += `<label class="check-label camp-opt camp-opt-${id}"><input type="checkbox" onchange="calculate()"><span style="color:#cc0000; font-weight:bold;">${name}</span></label>`;
       });
 
       tHPlan.forEach(p => {
@@ -371,7 +385,7 @@
         let id = d.id || d.ID || `hdisc_${Math.random()}`;
         let name = d.name || d.名前 || d.名称 || d.キャンペーン名 || id;
         hDisc.push({id: id, name: name, price: getNum(d.price || d.割引額 || d.割引 || d.val || d.value || d.金額), duration: getNum(d.duration || d.期間 || d.times)});
-        hCpHtml += `<label class="check-label hcamp-opt hcamp-opt-${id}" style="display:flex;"><input type="checkbox" onchange="calculate()"><span style="color:#cc0000; font-weight:bold;">${name}</span></label>`;
+        hCpHtml += `<label class="check-label hcamp-opt hcamp-opt-${id}"><input type="checkbox" onchange="calculate()"><span style="color:#cc0000; font-weight:bold;">${name}</span></label>`;
       });
 
       tHDev.forEach(d => {
@@ -401,7 +415,6 @@
     } catch (e) { console.error(e); alert("読込エラーが発生しました。"); }
   }
 
-  // ✨ オプションポップアップの処理 ✨
   function openMultiModal(lineId, type) {
     currentMultiLineId = lineId; currentMultiType = type;
     let title = '';
@@ -586,7 +599,6 @@
     renderTabs(); calculate();
   }
 
-  // ✨ HTMLは圧縮して1行にしていますが、機能は100%入っています ✨
   function addLine(type) {
     lineCounter++; const lineId = "line_" + lineCounter;
     document.querySelectorAll('.line-container').forEach(l => l.style.display = 'none');
@@ -1048,4 +1060,3 @@
     init();
   });
 </script>
-
