@@ -202,14 +202,9 @@
     .sticky-summary { position: static !important; border: 2px solid #cc0000 !important; }
     .section-body { overflow: visible !important; height: auto !important; }
     
-    /* 余計なボタンを印刷時に隠す */
     .btn { display: none !important; }
-    
-    /* 選択中のタブ（〇回線目）だけタイトルとして表示させる */
     .tab-btn:not(.active) { display: none !important; }
     .tab-btn.active { display: inline-block !important; border: 2px solid #cc0000; background: #fff0f5 !important; }
-    
-    /* ドロップダウンメニューの矢印などを消して文字だけにする */
     select { appearance: none; -webkit-appearance: none; border: none; background: transparent; padding: 0; font-weight: bold; }
     .section-card { break-inside: avoid; }
   }
@@ -237,7 +232,7 @@
       <p>スマホのみ、光のみ、または両方の合算シミュレーションが可能です。</p>
     </div>
     
-    <!-- ✨ 入力画面用タブエリア ＋ 印刷ボタン ✨ -->
+    <!-- 入力画面用タブエリア ＋ 印刷ボタン -->
     <div class="tab-bar-container" id="tabBarContainer" style="display:none; justify-content:space-between; align-items:center;">
       <div class="tab-bar" id="tabBar"></div>
       <button class="btn no-print" style="border:2px solid #cc0000; color:#cc0000; font-weight:bold; background:#fff;" onclick="window.print()">🖨️ この画面を印刷</button>
@@ -308,10 +303,9 @@
 </div>
 
 <script>
-  // 必須のグローバル関数を最上部で定義（エラー防止のため）
+  // グローバル関数の登録
   window.forceFetchData = function() {
-      if(confirm("スプレッドシートの最新データを読み込みますか？")) {
-          localStorage.removeItem("docomo_sim_cache_v2");
+      if(confirm("最新データを読み込みますか？")) {
           location.reload();
       }
   };
@@ -396,24 +390,9 @@
 
   async function init() {
     try {
-      const CACHE_KEY = "docomo_sim_cache_v2";
-      let texts = null;
-      
-      try {
-          let cached = localStorage.getItem(CACHE_KEY);
-          if (cached) {
-              let parsed = JSON.parse(cached);
-              if (Date.now() - parsed.time < 12 * 60 * 60 * 1000 && Array.isArray(parsed.data) && parsed.data.length >= 10) {
-                  texts = parsed.data;
-              }
-          }
-      } catch(e) { localStorage.removeItem(CACHE_KEY); }
-
-      if (!texts) {
-          const fetchTxt = async (url) => { try { return await (await fetch(url)).text(); } catch(e) { return ""; } };
-          texts = await Promise.all(CSV_URLS.map(url => fetchTxt(url)));
-          try { localStorage.setItem(CACHE_KEY, JSON.stringify({ time: Date.now(), data: texts })); } catch(e) {}
-      }
+      // 📝 エラー回避のため、キャッシュ機能は完全に停止し常に最新を取得します
+      const fetchTxt = async (url) => { try { let r = await fetch(url); return await r.text(); } catch(e) { return ""; } };
+      let texts = await Promise.all(CSV_URLS.map(url => fetchTxt(url)));
 
       const [tDev, tPlan, tOpt, tDisc, tHPlan, tHProv, tHOpt, tHDisc, tHDev, tHKoji] = texts;
 
@@ -521,7 +500,10 @@
       if (typeof Chart !== 'undefined') {
           initChart(new Array(48).fill(0), new Array(48).fill(0));
       }
-    } catch (e) { console.error(e); alert("読み込みエラーが発生しました。"); }
+    } catch (e) { 
+      console.error(e); 
+      alert("読み込みエラーが発生しました。更新ボタンを押してください。"); 
+    }
   }
 
   function openMultiModal(lineId, type) {
@@ -776,7 +758,6 @@
                     <span class="displayMobileOpt" style="font-size:13px; color:#333; font-weight:bold;">0点選択 (+0円)</span>
                     <button class="btn btn-primary" onclick="openMultiModal('${lineId}', 'mobileOpt')" style="padding:6px 12px; font-size:12px; background:#444;">変更</button>
                   </div>
-                  <!-- 裏で計算するための隠しコンテナ -->
                   <div class="mobile-opt-container" style="display:none;">${mSpHtml}${mOtherHtml}</div>
                 </div>
                 
@@ -838,7 +819,6 @@
                     <span class="displayFixedOpt" style="font-size:13px; color:#333; font-weight:bold;">0点選択 (+0円)</span>
                     <button class="btn btn-primary" onclick="openMultiModal('${lineId}', 'fixedOpt')" style="padding:6px 12px; font-size:12px; background:#444;">変更</button>
                   </div>
-                  <!-- 裏で計算するための隠しコンテナ -->
                   <div class="fixed-opt-container" style="display:none;">${hOptHtml}</div>
                 </div>
               </div>
@@ -867,7 +847,6 @@
                     <span class="displayFixedKoji" style="font-size:13px; color:#333; font-weight:bold;">0点選択 (総額 0円)</span>
                     <button class="btn btn-primary" onclick="openMultiModal('${lineId}', 'fixedKoji')" style="padding:6px 12px; font-size:12px; background:#444;">変更</button>
                   </div>
-                  <!-- 裏で計算するための隠しコンテナ -->
                   <div id="hKojiContainer_${lineId}" class="fixed-koji-container" style="display:none;">${hKojiHtml}</div>
                   
                   <div style="text-align:right; font-size:11px; color:#cc0000; font-weight:bold; margin-top:6px;">
@@ -991,6 +970,8 @@
       if(myChart && myChart.data){ myChart.data.datasets[0].data=arrD; myChart.data.datasets[1].data=arrP; myChart.update(); }
       generateTimeline(arrP, arrD, 0); return;
     }
+
+    let bHtml = '';
 
     blocks.forEach((block, index) => {
       const type = block.getAttribute("data-type");
@@ -1174,8 +1155,7 @@
         if(block.querySelector('.line-final-total')) block.querySelector('.line-final-total').innerText = lM2.toLocaleString();
         if (block.id === activeLineId) singleActiveM2 = lM2;
         let bClass = (block.id===activeLineId) ? 'active-badge' : '';
-        let bHtmlLine = `<div class="line-badge ${bClass}" onclick="switchTab('${block.id}')">📱 ${index+1}回線目<span>${lM2.toLocaleString()}円</span></div>`;
-        if(document.getElementById("bottomLineTotals")) document.getElementById("bottomLineTotals").innerHTML += bHtmlLine;
+        bHtml += `<div class="line-badge ${bClass}" onclick="switchTab('${block.id}')">📱 ${index+1}回線目<span>${lM2.toLocaleString()}円</span></div>`;
       
       } else if (type === 'fixed') {
         const devSel = block.querySelector('.hDevSelect');
