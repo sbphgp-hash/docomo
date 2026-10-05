@@ -38,12 +38,22 @@
     overflow-x: auto; max-width: 100%;
   }
   .tab-btn {
-    padding: 8px 20px; background: transparent; border: none;
+    padding: 8px 16px; background: transparent; border: none;
     border-radius: 8px; cursor: pointer; font-weight: bold; color: #666; font-size: 13px;
     transition: all 0.2s ease; white-space: nowrap;
+    display: inline-flex; align-items: center;
   }
   .tab-btn.active { background: #ffffff; color: #cc0000; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
   .tab-btn.active.fixed-tab { color: #118ab2; }
+  
+  /* タブ内の削除ボタン(バツマーク) */
+  .tab-close-btn {
+    display: inline-flex; justify-content: center; align-items: center;
+    width: 20px; height: 20px; border-radius: 50%;
+    margin-left: 8px; font-size: 11px; color: #888;
+    background: rgba(0,0,0,0.06); transition: all 0.2s;
+  }
+  .tab-close-btn:hover { background: rgba(204,0,0,0.15); color: #cc0000; }
 
   /* 3カラム横並びレイアウト */
   .view-container { display: none; padding: 16px; max-width: 1400px; margin: 0 auto; }
@@ -89,8 +99,21 @@
   }
   select:focus, input[type="number"]:focus { border-color: #cc0000; outline: none; }
   
-  /* 旧チェックボックスは裏側で計算用に残し、画面からは隠す */
-  .check-label { display: none; }
+  .check-label {
+    display: flex; align-items: center; gap: 6px; font-size: 12px; margin-bottom: 6px;
+    cursor: pointer; padding: 6px 10px; border-radius: 8px; border: 1px solid #eee; transition: all 0.2s;
+  }
+  .check-label:hover { background: #f9f9f9; }
+  .check-label input { transform: scale(1.2); accent-color: #cc0000; margin:0; }
+
+  /* グラフ画面の回線セレクター */
+  .graph-toggle-btn {
+    padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: bold; cursor: pointer;
+    border: 2px solid #ddd; background: #fff; color: #555; transition: all 0.2s;
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+  .graph-toggle-btn:hover { background: #f8f9fa; border-color: #ccc; }
+  .graph-toggle-btn.active { border-color: #cc0000; background: #fff0f5; color: #cc0000; }
 
   /* 下部バー */
   .bottom-bar {
@@ -118,21 +141,6 @@
     border-radius: 6px; cursor: pointer; color: #666; transition: all 0.2s;
   }
   .mode-btn.active { background: #cc0000; color: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
-
-  /* モーダル用 カードUI */
-  .multi-card {
-    background: #fff; border: 2px solid #eee; border-radius: 8px; padding: 12px 16px;
-    display: flex; justify-content: space-between; align-items: center; cursor: pointer;
-    transition: all 0.2s ease;
-  }
-  .multi-card.active { border-color: #cc0000; background: #fff0f5; }
-  .multi-card.disabled { opacity: 0.4; cursor: not-allowed; background: #f9f9f9; border-color:#eee; }
-  .checkbox-mock { 
-    width: 22px; height: 22px; border: 2px solid #ccc; border-radius: 6px; 
-    display:flex; justify-content:center; align-items:center; background:#fff; flex-shrink:0; transition:all 0.2s;
-  }
-  .checkbox-mock.checked { background: #cc0000; border-color: #cc0000; }
-  .checkbox-mock.checked::after { content: '✔'; color: #fff; font-size: 14px; font-weight:bold; }
 
   /* モーダル共通 */
   .modal-overlay {
@@ -178,6 +186,8 @@
   .device-card-name { font-weight: bold; font-size: 13px; color: #333; line-height: 1.4; }
   .device-card-price { font-size: 11px; color: #cc0000; font-weight: bold; margin-top: 6px; }
 
+  /* グラフ・空画面 */
+  .timeline-container { background: #fff; padding: 24px; border-radius: 12px; border: 1px solid #ddd; margin-top: 24px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); }
   .timeline-table { width: 100%; border-collapse: collapse; font-size: 14px; }
   .timeline-table th, .timeline-table td { border-bottom: 1px solid #eee; padding: 16px; }
   .timeline-table th { background: #fafbfc; text-align: left; width: 180px; font-weight: 800;}
@@ -189,24 +199,6 @@
     .two-columns { flex-direction: column; }
     .col-left { flex-direction: column; width: 100%; }
     .col-right { width: 100%; }
-  }
-
-  /* ✨ 印刷時の美しいレイアウト設定 ✨ */
-  @media print {
-    @page { size: landscape; margin: 10mm; }
-    body { background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    .top-nav, .bottom-bar, .no-print { display: none !important; }
-    .view-container { padding: 0 !important; }
-    .view-container:not(.view-active) { display: none !important; }
-    .view-container.view-active { display: block !important; }
-    .sticky-summary { position: static !important; border: 2px solid #cc0000 !important; }
-    .section-body { overflow: visible !important; height: auto !important; }
-    
-    .btn { display: none !important; }
-    .tab-btn:not(.active) { display: none !important; }
-    .tab-btn.active { display: inline-block !important; border: 2px solid #cc0000; background: #fff0f5 !important; }
-    select { appearance: none; -webkit-appearance: none; border: none; background: transparent; padding: 0; font-weight: bold; }
-    .section-card { break-inside: avoid; }
   }
 </style>
 
@@ -226,30 +218,32 @@
     </div>
   </div>
 
-  <div id="input-view" class="view-container view-active" style="padding-bottom: 100px;">
-    <div id="emptyState" class="no-print">
+  <div id="input-view" class="view-container view-active no-print" style="padding-bottom: 100px;">
+    <div id="emptyState">
       <h2>上のボタンから回線を追加してください</h2>
       <p>スマホのみ、光のみ、または両方の合算シミュレーションが可能です。</p>
     </div>
-    
-    <!-- 入力画面用タブエリア ＋ 印刷ボタン -->
-    <div class="tab-bar-container" id="tabBarContainer" style="display:none; justify-content:space-between; align-items:center;">
+    <div class="tab-bar-container" id="tabBarContainer" style="display:none;">
       <div class="tab-bar" id="tabBar"></div>
-      <button class="btn no-print" style="border:2px solid #cc0000; color:#cc0000; font-weight:bold; background:#fff;" onclick="window.print()">🖨️ この画面を印刷</button>
     </div>
-    
     <div id="linesContainer" style="margin-top:16px;"></div>
   </div>
 
   <div id="graph-view" class="view-container" style="padding-bottom: 120px;">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
       <h2 style="margin: 0; font-size: 22px;">お支払い目安 (4年間の推移)</h2>
-      <button class="btn btn-primary no-print" onclick="window.print()">🖨️ グラフを印刷</button>
+      <button class="btn btn-primary no-print" onclick="window.print()">🖨️ 見積印刷</button>
     </div>
+    
+    <div class="no-print" style="background: #f8f9fa; padding: 12px 16px; border-radius: 12px; border: 1px solid #eee; margin-bottom: 16px;">
+      <div style="font-size: 12px; font-weight: bold; color: #555; margin-bottom: 8px;">📊 グラフ・表に表示する回線を選択：</div>
+      <div id="graph-line-selectors" style="display: flex; gap: 8px; flex-wrap: wrap;"></div>
+    </div>
+
     <div style="background: #fff; padding: 16px; border-radius: 12px; border: 1px solid #ddd; height: 350px;">
       <canvas id="costChart"></canvas>
     </div>
-    <div class="timeline-container" id="timelineContainer" style="background: #fff; padding: 24px; border-radius: 12px; border: 1px solid #ddd; margin-top: 24px;"></div>
+    <div class="timeline-container" id="timelineContainer"></div>
   </div>
 
   <div class="bottom-bar no-print">
@@ -271,11 +265,11 @@
   </div>
 </div>
 
-<!-- 機種選択モーダル -->
-<div id="deviceModal" class="modal-overlay no-print">
+<!-- スマホ・ルーター機種選択モーダル -->
+<div id="deviceModal" class="modal-overlay">
   <div class="modal-content">
     <div class="modal-header">
-      <h3>📱 機種を選択</h3>
+      <h3>📱 機種/機器 を選択</h3>
       <button class="btn-close" onclick="closeDeviceModal()">×</button>
     </div>
     <div class="modal-body-container">
@@ -285,30 +279,37 @@
   </div>
 </div>
 
-<!-- 複数選択（オプション・工事費）用モーダル -->
-<div id="multiModal" class="modal-overlay no-print">
-  <div class="modal-content" style="max-width: 600px; height: 75vh;">
+<!-- 光オプション選択用モーダル -->
+<div id="optModal" class="modal-overlay">
+  <div class="modal-content" style="max-width: 500px; height: 75vh;">
     <div class="modal-header">
-      <h3 id="multiModalTitle">オプションを選択</h3>
-      <button class="btn-close" onclick="closeMultiModal()">×</button>
+      <h3>⚙️ オプションを選択</h3>
+      <button class="btn-close" onclick="closeOptModal()">×</button>
     </div>
-    <div class="modal-body-container" style="flex-direction: column; overflow: hidden;">
-      <div class="modal-main" id="multiModalGrid" style="display: flex; flex-direction: column; gap: 8px; padding: 16px; background:#f4f5f7;">
-      </div>
-      <div style="padding: 16px; border-top: 1px solid #eee; text-align: center; background: #fff;">
-         <button class="btn btn-primary" onclick="closeMultiModal()" style="display:inline-block; font-size:16px; padding:12px 48px; border-radius:30px;">決定して戻る</button>
-      </div>
+    <div class="modal-body-container" style="flex-direction: column; overflow-y: auto; padding: 20px; background: #fdfdfd;" id="optModalGrid">
+    </div>
+    <div style="padding: 16px; border-top: 1px solid #eee; text-align: center; background: #fafbfc;">
+      <button class="btn btn-primary" onclick="closeOptModal()" style="width: 100%; justify-content: center; font-size: 16px; padding: 12px;">決定 / 閉じる</button>
+    </div>
+  </div>
+</div>
+
+<!-- 光工事費選択用モーダル -->
+<div id="kojiModal" class="modal-overlay">
+  <div class="modal-content" style="max-width: 500px; height: 75vh;">
+    <div class="modal-header">
+      <h3>🛠️ 工事費・その他費用 を選択</h3>
+      <button class="btn-close" onclick="closeKojiModal()">×</button>
+    </div>
+    <div class="modal-body-container" style="flex-direction: column; overflow-y: auto; padding: 20px; background: #fdfdfd;" id="kojiModalGrid">
+    </div>
+    <div style="padding: 16px; border-top: 1px solid #eee; text-align: center; background: #fafbfc;">
+      <button class="btn btn-primary" onclick="closeKojiModal()" style="width: 100%; justify-content: center; font-size: 16px; padding: 12px;">決定 / 閉じる</button>
     </div>
   </div>
 </div>
 
 <script>
-  // グローバル関数の登録
-  window.forceFetchData = function() {
-      if(confirm("最新データを読み込みますか？")) {
-          location.reload();
-      }
-  };
   window.safeAddLine = safeAddLine;
   window.calculate = calculate;
   window.switchView = switchView;
@@ -318,18 +319,27 @@
   window.setDisplayMode = setDisplayMode;
   window.switchTab = switchTab;
   window.updateHProv = updateHProv;
+  
   window.openDeviceModal = openDeviceModal;
   window.closeDeviceModal = closeDeviceModal;
   window.selectDevice = selectDevice;
-  window.openMultiModal = openMultiModal;
-  window.closeMultiModal = closeMultiModal;
-  window.toggleMultiItem = toggleMultiItem;
+  window.openFixedOptModal = openFixedOptModal;
+  window.closeOptModal = closeOptModal;
+  window.openKojiModal = openKojiModal;
+  window.closeKojiModal = closeKojiModal;
+  
+  // ★ 新しいAPIのURL
+  const GAS_API_URL = "https://script.google.com/macros/s/AKfycbwGhvnQRPdMxyj0OLLGVvUw82H364JygbjyV4EdRHHz7jQdFmCdtvnBFoT1mcDIXwRh/exec";
+  
+  // ★ バージョンを更新して強制リセット
+  const CACHE_KEY_NEW = "docomo_sim_cache_v11";
 
-  const B_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSxkg_tTd2f_kAcqtH7hXHPq5zbSm-fOHRh3T3ZNAho31pmmGxhhnbbFxqojwDz3j5sRQfB2EZrmMPr/pub?single=true&output=csv&gid=";
-  const CSV_URLS = [
-    B_URL+"0", B_URL+"1240444955", B_URL+"585324112", B_URL+"7262986", B_URL+"117037676",
-    B_URL+"1826250395", B_URL+"1143788577", B_URL+"843369484", B_URL+"1561318585", B_URL+"1393674300"
-  ];
+  window.forceFetchData = function() {
+      if(confirm("スプレッドシートの最新データを読み込みますか？")) {
+          localStorage.removeItem(CACHE_KEY_NEW);
+          location.reload();
+      }
+  };
 
   let dDev={}, dOpt=[], dPlan={}, dDisc=[];
   let hPlan={}, hProv=[], hOpt=[], hDisc=[], hDev={}, hKoji=[];
@@ -340,9 +350,17 @@
   let mandatoryFeeTotal = 0; 
   let activeLineId = null;
   let currentDisplayMode = 'all';
+  
   let editingDeviceLineId = null; 
-  let currentMultiLineId = null;
-  let currentMultiType = '';
+  let editingDeviceType = 'mobile'; 
+  let editingOptLineId = null; 
+  let editingKojiLineId = null; 
+
+  let mobileAdminFee = 3850;
+  let fixedAdminFee = 3300;
+
+  let lineGraphData = {};
+  let graphSelectedLines = new Set();
 
   let mPlanHtml = `<option value="none">未選択</option>`;
   let mCallHtml = `<option value="none">未加入 (0円)</option>`, mHoshouHtml = `<option value="none">未加入 (0円)</option>`;
@@ -351,37 +369,12 @@
   let hPlanHtml = `<option value="none">未選択</option>`, hDevHtml = `<option value="none">機器なし / その他</option>`;
   let hOptHtml = ``, hCpHtml = ``, hKojiHtml = ``;
 
-  function parseCSV(text) {
-    if (!text) return [];
-    text = text.replace(/^\uFEFF/, ''); 
-    const lines = text.trim().split('\n').filter(l => l && !l.match(/^\|?[\s:-]+\|?$/));
-    if (lines.length < 2) return [];
-
-    let delimiter = ',';
-    if (lines[0].includes('\t')) delimiter = '\t';
-    if (lines[0].includes('|') && !lines[0].includes(',')) delimiter = '|';
-
-    const splitRow = (str) => {
-        let arr = []; let cur = ''; let inQ = false;
-        for(let i=0; i<str.length; i++) {
-            let c = str[i];
-            if(c === '"') { inQ = !inQ; }
-            else if(c === delimiter && !inQ) { arr.push(cur.trim()); cur = ''; }
-            else { cur += c; }
-        }
-        arr.push(cur.trim());
-        if(delimiter === '|' && arr[0] === '') arr.shift();
-        if(delimiter === '|' && arr[arr.length-1] === '') arr.pop();
-        return arr;
-    };
-
-    const rawHeaders = splitRow(lines[0]);
-    const headers = rawHeaders.map(h => h.replace(/[\uFEFF\u200B\*\s"']/g, '').toLowerCase().replace(/ｉ/g, 'i').replace(/ｄ/g, 'd'));
-
-    return lines.slice(1).map(line => {
-       const vals = splitRow(line);
+  function parseArray(arr) {
+    if (!arr || arr.length < 2) return [];
+    const headers = arr[0].map(h => String(h).replace(/[\uFEFF\u200B\*\s"']/g, '').toLowerCase().replace(/ｉ/g, 'i').replace(/ｄ/g, 'd'));
+    return arr.slice(1).map(row => {
        let obj = {};
-       headers.forEach((h, idx) => { obj[h] = vals[idx] || ""; });
+       headers.forEach((h, idx) => { obj[h] = String(row[idx] || "").trim(); });
        return obj;
     }).filter(obj => Object.keys(obj).some(k => obj[k] !== ""));
   }
@@ -389,19 +382,61 @@
   const getNum = (val) => Number(String(val).replace(/[,円回]/g, '').trim()) || 0;
 
   async function init() {
+    if (GAS_API_URL === "ここにURLを貼り付けます") {
+        alert("GASのWebアプリURLが設定されていません。コード内の GAS_API_URL を書き換えてください。");
+        document.getElementById('addMobileBtn').innerHTML = '⚠️ URL未設定';
+        document.getElementById('addFixedBtn').innerHTML = '⚠️ URL未設定';
+        return;
+    }
+
     try {
-      // 📝 エラー回避のため、キャッシュ機能は完全に停止し常に最新を取得します
-      const fetchTxt = async (url) => { try { let r = await fetch(url); return await r.text(); } catch(e) { return ""; } };
-      let texts = await Promise.all(CSV_URLS.map(url => fetchTxt(url)));
+      let dataObj = null;
+      
+      try {
+          let cached = localStorage.getItem(CACHE_KEY_NEW);
+          if (cached) {
+              let parsed = JSON.parse(cached);
+              if (Date.now() - parsed.time < 12 * 60 * 60 * 1000) {
+                  dataObj = parsed.data;
+              }
+          }
+      } catch(e) {}
 
-      const [tDev, tPlan, tOpt, tDisc, tHPlan, tHProv, tHOpt, tHDisc, tHDev, tHKoji] = texts;
+      if (!dataObj) {
+          document.getElementById('addMobileBtn').innerHTML = '⏳ 爆速読込中...';
+          document.getElementById('addFixedBtn').innerHTML = '⏳ 爆速読込中...';
 
-      parseCSV(tDev).forEach(p => {
+          try {
+              let res = await fetch(GAS_API_URL);
+              dataObj = await res.json();
+              if(dataObj) {
+                  localStorage.setItem(CACHE_KEY_NEW, JSON.stringify({ time: Date.now(), data: dataObj }));
+              }
+          } catch(e) {
+              alert("データの取得に失敗しました。URLが正しいか、または「全員」に公開されているか確認してください。");
+              return;
+          }
+      }
+
+      const tDev = parseArray(dataObj["0"]);
+      const tPlan = parseArray(dataObj["1240444955"]);
+      const tOpt = parseArray(dataObj["585324112"]);
+      const tDisc = parseArray(dataObj["7262986"]);
+      const tHPlan = parseArray(dataObj["117037676"]);
+      const tHProv = parseArray(dataObj["1826250395"]);
+      const tHOpt = parseArray(dataObj["1143788577"]);
+      const tHDisc = parseArray(dataObj["843369484"]);
+      const tHDev = parseArray(dataObj["1561318585"]);
+      const tHKoji = parseArray(dataObj["1393674300"]);
+
+      tDev.forEach(p => {
         let id = p.id || p.ID || `dev_${Math.random()}`;
         let name = p.name || p.名前 || p.名称 || p.機種名 || id;
         if(name === id && !p.price_total) return; 
+        
         let cat = p.category || p.カテゴリ || "スマホ"; 
         deviceCategories.add(cat);
+        
         dDev[id] = {
           name: name, category: cat, price_total: getNum(p.price_total || p.総額),
           hoshou_price: getNum(p.hoshou_price), applecare_price: getNum(p.applecare_price), applecare_theft_price: getNum(p.applecare_theft_price),
@@ -411,7 +446,7 @@
         };
       });
 
-      parseCSV(tPlan).forEach(p => {
+      tPlan.forEach(p => {
         let id = p.id || p.ID || `plan_${Math.random()}`;
         let name = p.name || p.名前 || p.名称 || p.プラン名 || id;
         let price = getNum(p.price || p.料金);
@@ -419,26 +454,33 @@
         mPlanHtml += `<option value="${id}">${name} : ${price.toLocaleString()}円</option>`;
       });
 
-      parseCSV(tOpt).forEach(o => {
+      tOpt.forEach(o => {
         let id = o.id || o.ID || `opt_${Math.random()}`;
         let name = o.name || o.名前 || o.名称 || id;
         let price = getNum(o.price || o.料金);
         let type = o.type || o.タイプ || "other";
-        if(type==="mandatory") mandatoryFeeTotal += price;
+        
+        if (type === "admin_fee" || type === "admin_free" || name.includes("事務手数料")) {
+            mobileAdminFee = price;
+        }
+        else if(type==="mandatory") mandatoryFeeTotal += price;
         else if(type==="call") mCallHtml += `<option value="${id}" data-price="${price}">${name} (+${price}円)</option>`;
         else if(type==="hoshou") mHoshouHtml += `<option value="${id}" data-price="${price}">${name} (+${price}円)</option>`;
-        else if(type==="other") mOtherHtml += `<label class="check-label dyn-other-opt" data-price="${price}"><input type="checkbox" onchange="calculate()"> ${name} (+${price}円)</label>`;
-        else if(type==="special") mSpHtml += `<label class="check-label special-opt" data-price="${price}"><input type="checkbox" onchange="calculate()"> <span style="color:#cc0000; font-weight:bold;">${name}</span> (+${price}円)</label>`;
+        else if(type==="special") mSpHtml += `<label class="check-label special-opt" data-price="${price}"><input type="checkbox" onchange="calculate()"> <span style="color:#cc0000; font-weight:bold;">${name}</span></label>`;
+        else {
+            let addClass = type === "max_free_opt" ? "max-free-opt" : "";
+            mOtherHtml += `<label class="check-label dyn-other-opt ${addClass}" data-price="${price}"><input type="checkbox" onchange="calculate()"> ${name}</label>`;
+        }
       });
 
-      parseCSV(tDisc).forEach(d => {
+      tDisc.forEach(d => {
         let id = d.id || d.ID || `disc_${Math.random()}`;
         let name = d.name || d.名前 || d.名称 || d.キャンペーン名 || id;
         dDisc.push({id: id, name: name, duration: getNum(d.duration || d.期間)});
-        mCpHtml += `<label class="check-label camp-opt camp-opt-${id}" style="display:flex;"><input type="checkbox" onchange="calculate()"><span style="color:#cc0000; font-weight:bold;">${name}</span></label>`;
+        mCpHtml += `<label class="check-label camp-opt camp-opt-${id}"><input type="checkbox" onchange="calculate()"><span style="color:#cc0000; font-weight:bold;">${name}</span></label>`;
       });
 
-      parseCSV(tHPlan).forEach(p => {
+      tHPlan.forEach(p => {
         let id = p.id || p.ID || `hplan_${Math.random()}`;
         let name = p.name || p.名前 || p.名称 || p.プラン名 || id;
         let price = getNum(p.price || p.料金);
@@ -447,33 +489,41 @@
         hPlanHtml += `<option value="${id}">${name} : ${price.toLocaleString()}円</option>`;
       });
 
-      parseCSV(tHProv).forEach(p => {
+      tHProv.forEach(p => {
         let id = p.id || p.ID || `hprov_${Math.random()}`;
         let name = p.name || p.名前 || p.プロバイダ名 || id;
         let pType = p.prov_type || p.type || "none";
         hProv.push({id: id, name: name, prov_type: pType});
       });
 
-      parseCSV(tHOpt).forEach(o => {
+      tHOpt.forEach(o => {
         let id = o.id || o.ID || `hopt_${Math.random()}`;
         let name = o.name || o.名前 || o.名称 || id;
         let price = getNum(o.price || o.料金);
-        hOpt.push({id: id, name: name, price: price});
-        hOptHtml += `<label class="check-label dyn-hopt" data-price="${price}"><input type="checkbox" onchange="calculate()"> ${name} (+${price}円)</label>`;
+        let type = o.type || o.タイプ || "other";
+        
+        if(type === "admin_fee" || type === "admin_free" || name.includes("事務手数料")) {
+            fixedAdminFee = price;
+        } else {
+            hOpt.push({id: id, name: name, price: price});
+            hOptHtml += `<label class="check-label dyn-hopt" data-price="${price}"><input type="checkbox" onchange="calculate()"> ${name} (+${price}円)</label>`;
+        }
       });
 
-      parseCSV(tHDisc).forEach(d => {
+      tHDisc.forEach(d => {
         let id = d.id || d.ID || `hdisc_${Math.random()}`;
         let name = d.name || d.名前 || d.名称 || d.キャンペーン名 || id;
         hDisc.push({id: id, name: name, price: getNum(d.price || d.割引額 || d.割引 || d.val || d.value || d.金額), duration: getNum(d.duration || d.期間 || d.times)});
-        hCpHtml += `<label class="check-label hcamp-opt hcamp-opt-${id}" style="display:flex;"><input type="checkbox" onchange="calculate()"><span style="color:#cc0000; font-weight:bold;">${name}</span></label>`;
+        hCpHtml += `<label class="check-label hcamp-opt hcamp-opt-${id}"><input type="checkbox" onchange="calculate()"><span style="color:#cc0000; font-weight:bold;">${name}</span></label>`;
       });
 
-      parseCSV(tHDev).forEach(d => {
+      tHDev.forEach(d => {
         let id = d.id || d.ID || `hdev_${Math.random()}`;
         let name = d.name || d.名前 || d.名称 || d.機器名 || id;
+        if (name === id && !d.price_total && !d.総額 && !d.金額 && !d.価格) return;
+
         hDev[id] = {
-          name: name, price_total: getNum(d.price_total||d.総額),
+          name: name, price_total: getNum(d.price_total||d.総額||d.価格||d.金額||d.本体価格),
           d12_1: getNum(d.div12_m1||d.d12_1), d12_2: getNum(d.div12_m2||d.d12_2),
           d24_1: getNum(d.div24_m1||d.d24_1), d24_2: getNum(d.div24_m2||d.d24_2),
           d36_1: getNum(d.div36_m1||d.d36_1), d36_2: getNum(d.div36_m2||d.d36_2),
@@ -483,10 +533,12 @@
         hDevHtml += `<option value="${id}">${name}</option>`;
       });
 
-      parseCSV(tHKoji).forEach(k => {
+      tHKoji.forEach(k => {
         let id = k.id || k.ID || `hkoji_${Math.random()}`;
-        let name = k.name || k.名前 || k.名称 || k.工事名 || id;
-        let total = getNum(k.price_total || k.総額);
+        let name = k.name || k.名前 || k.名称 || k.工事名 || k.費用名 || id;
+        if (name === id && !k.price_total && !k.総額 && !k.金額) return;
+
+        let total = getNum(k.price_total || k.総額 || k.料金 || k.金額);
         let d12m1 = getNum(k.d12_m1), d12m2 = getNum(k.d12_m2);
         let d24m1 = getNum(k.d24_m1), d24m2 = getNum(k.d24_m2);
         hKojiHtml += `<label class="check-label dyn-hkoji" data-total="${total}" data-d12m1="${d12m1}" data-d12m2="${d12m2}" data-d24m1="${d24m1}" data-d24m2="${d24m2}"><input type="checkbox" onchange="calculate()"> ${name}</label>`;
@@ -497,135 +549,99 @@
       document.getElementById('addFixedBtn').disabled = false;
       document.getElementById('addFixedBtn').innerHTML = '🌐 光・home5G追加';
 
-      if (typeof Chart !== 'undefined') {
-          initChart(new Array(48).fill(0), new Array(48).fill(0));
-      }
-    } catch (e) { 
-      console.error(e); 
-      alert("読み込みエラーが発生しました。更新ボタンを押してください。"); 
-    }
+      initChart(new Array(48).fill(0), new Array(48).fill(0));
+    } catch (e) { console.error(e); alert("読み込みエラーが発生しました。"); }
   }
 
-  function openMultiModal(lineId, type) {
-    currentMultiLineId = lineId;
-    currentMultiType = type;
-    
-    let title = '';
-    if (type === 'mobileOpt') title = 'スマホのオプションを選択';
-    else if (type === 'fixedOpt') title = '光のオプションを選択';
-    else if (type === 'fixedKoji') title = '工事費を選択';
-    
-    document.getElementById('multiModalTitle').innerText = title;
-    renderMultiModalItems();
-    document.getElementById('multiModal').style.display = 'flex';
-  }
-
-  function closeMultiModal() {
-    document.getElementById('multiModal').style.display = 'none';
-    currentMultiLineId = null;
-    currentMultiType = '';
-  }
-
-  function renderMultiModalItems() {
-    if (!currentMultiLineId) return;
-    const block = document.getElementById(currentMultiLineId);
-    let containerSelector = '';
-    
-    if (currentMultiType === 'mobileOpt') containerSelector = '.mobile-opt-container';
-    else if (currentMultiType === 'fixedOpt') containerSelector = '.fixed-opt-container';
-    else if (currentMultiType === 'fixedKoji') containerSelector = '.fixed-koji-container';
-    
-    const container = block.querySelector(containerSelector);
-    if (!container) return;
-    
-    const labels = container.querySelectorAll('.check-label');
-    let html = '';
-    
-    labels.forEach((lbl, index) => {
-        const input = lbl.querySelector('input');
-        const isActive = input.checked;
-        const isDisabled = input.disabled;
-        const text = lbl.innerText.trim();
-        
-        html += `
-            <div class="multi-card ${isActive ? 'active' : ''} ${isDisabled ? 'disabled' : ''}" onclick="toggleMultiItem(${index})">
-               <div style="display:flex; align-items:center; gap:16px;">
-                  <div class="checkbox-mock ${isActive ? 'checked' : ''}"></div>
-                  <div style="font-weight:bold; font-size:15px; color: ${isDisabled ? '#999' : '#333'}">${text}</div>
-               </div>
-            </div>
-        `;
-    });
-    document.getElementById('multiModalGrid').innerHTML = html;
-  }
-
-  function toggleMultiItem(index) {
-    const block = document.getElementById(currentMultiLineId);
-    let containerSelector = '';
-    if (currentMultiType === 'mobileOpt') containerSelector = '.mobile-opt-container';
-    else if (currentMultiType === 'fixedOpt') containerSelector = '.fixed-opt-container';
-    else if (currentMultiType === 'fixedKoji') containerSelector = '.fixed-koji-container';
-    
-    const container = block.querySelector(containerSelector);
-    const input = container.querySelectorAll('.check-label input')[index];
-    
-    if(input.disabled) return; 
-    input.checked = !input.checked;
-    
-    calculate(); 
-    renderMultiModalItems(); 
-  }
-
-  function openDeviceModal(lineId) {
+  function openDeviceModal(lineId, type = 'mobile') {
     editingDeviceLineId = lineId;
+    editingDeviceType = type;
     document.getElementById('deviceModal').style.display = 'flex';
     
     const sidebar = document.getElementById('modalSidebar');
     sidebar.innerHTML = '';
-    
-    const noneBtn = document.createElement('button');
-    noneBtn.className = 'm-cat-btn';
-    noneBtn.innerText = '💳 SIMのみ (機器なし)';
-    noneBtn.onclick = (e) => { selectDevice('none'); };
-    sidebar.appendChild(noneBtn);
-
-    let firstCat = null;
-    deviceCategories.forEach(cat => {
-      if(!firstCat) firstCat = cat;
-      const btn = document.createElement('button');
-      btn.className = 'm-cat-btn';
-      btn.innerText = cat;
-      btn.onclick = (e) => {
-        document.querySelectorAll('.m-cat-btn').forEach(b => b.classList.remove('active'));
-        e.target.classList.add('active');
-        renderDeviceGrid(cat);
-      };
-      sidebar.appendChild(btn);
-    });
-
-    if(firstCat) {
-      sidebar.childNodes[1].classList.add('active'); 
-      renderDeviceGrid(firstCat);
-    }
-  }
-
-  function renderDeviceGrid(category) {
     const grid = document.getElementById('modalGrid');
     grid.innerHTML = '';
     
-    for(const id in dDev) {
-      if(dDev[id].category === category) {
-        let nameLower = dDev[id].name.toLowerCase();
-        let isApple = nameLower.includes("iphone") || nameLower.includes("ipad");
-        let icon = isApple ? "🍎" : "📱";
-        if(nameLower.includes("キッズ")) icon = "🧒";
+    const noneBtn = document.createElement('button');
+    noneBtn.className = 'm-cat-btn';
+    noneBtn.innerText = type === 'mobile' ? '💳 SIMのみ (機器なし)' : '💳 機器なし / その他';
+    noneBtn.onclick = (e) => { selectDevice('none'); };
+    sidebar.appendChild(noneBtn);
+
+    if (type === 'mobile') {
+      let firstCat = null;
+      deviceCategories.forEach(cat => {
+        if(!firstCat) firstCat = cat;
+        const btn = document.createElement('button');
+        btn.className = 'm-cat-btn';
+        btn.innerText = cat;
+        btn.onclick = (e) => {
+          document.querySelectorAll('.m-cat-btn').forEach(b => b.classList.remove('active'));
+          e.target.classList.add('active');
+          renderDeviceGrid(cat, type);
+        };
+        sidebar.appendChild(btn);
+      });
+
+      if(firstCat) {
+        sidebar.childNodes[1].classList.add('active'); 
+        renderDeviceGrid(firstCat, type);
+      }
+    } else {
+      const btn = document.createElement('button');
+      btn.className = 'm-cat-btn active';
+      btn.innerText = 'ルーター・機器';
+      btn.onclick = (e) => {
+        document.querySelectorAll('.m-cat-btn').forEach(b => b.classList.remove('active'));
+        e.target.classList.add('active');
+        renderDeviceGrid('all', type);
+      };
+      sidebar.appendChild(btn);
+      renderDeviceGrid('all', type);
+    }
+  }
+
+  function closeDeviceModal() {
+    document.getElementById('deviceModal').style.display = 'none';
+    editingDeviceLineId = null;
+  }
+
+  function renderDeviceGrid(category, type = 'mobile') {
+    const grid = document.getElementById('modalGrid');
+    grid.innerHTML = '';
+    
+    if (type === 'mobile') {
+      for(const id in dDev) {
+        if(dDev[id].category === category) {
+          let nameLower = dDev[id].name.toLowerCase();
+          let isApple = nameLower.includes("iphone") || nameLower.includes("ipad");
+          let icon = isApple ? "🍎" : "📱";
+          if(nameLower.includes("キッズ")) icon = "🧒";
+          
+          let priceText = dDev[id].price_total > 0 ? `総額目安: ${dDev[id].price_total.toLocaleString()}円` : "";
+          
+          grid.innerHTML += `
+            <div class="device-card" onclick="selectDevice('${id}')">
+              <div class="device-card-img">${icon}</div>
+              <div class="device-card-name">${dDev[id].name}</div>
+              <div class="device-card-price">${priceText}</div>
+            </div>
+          `;
+        }
+      }
+    } else {
+      for(const id in hDev) {
+        let nameLower = hDev[id].name.toLowerCase();
+        let icon = "🌐";
+        if(nameLower.includes("home") || nameLower.includes("hr")) icon = "🏠";
         
-        let priceText = dDev[id].price_total > 0 ? `総額目安: ${dDev[id].price_total.toLocaleString()}円` : "";
+        let priceText = hDev[id].price_total > 0 ? `総額目安: ${hDev[id].price_total.toLocaleString()}円` : "";
         
         grid.innerHTML += `
           <div class="device-card" onclick="selectDevice('${id}')">
             <div class="device-card-img">${icon}</div>
-            <div class="device-card-name">${dDev[id].name}</div>
+            <div class="device-card-name">${hDev[id].name}</div>
             <div class="device-card-price">${priceText}</div>
           </div>
         `;
@@ -637,11 +653,191 @@
     if(!editingDeviceLineId) return;
     const block = document.getElementById(editingDeviceLineId);
     if(block) {
-        block.querySelector('.hiddenDeviceVal').value = devId;
-        block.querySelector('.displayDeviceName').innerText = devId === 'none' ? '💳 SIMのみ (機器なし)' : dDev[devId].name;
+        if (editingDeviceType === 'mobile') {
+            block.querySelector('.hiddenDeviceVal').value = devId;
+            block.querySelector('.displayDeviceName').innerText = devId === 'none' ? '💳 SIMのみ (機器なし)' : dDev[devId].name;
+        } else {
+            block.querySelector('.hDevSelect').value = devId;
+            block.querySelector('.displayHDevName').innerText = devId === 'none' ? '機器なし / その他' : hDev[devId].name;
+        }
     }
     closeDeviceModal();
     calculate();
+  }
+
+  function openFixedOptModal(lineId) {
+      editingOptLineId = lineId;
+      const block = document.getElementById(lineId);
+      const hiddenGrid = block.querySelector('.hidden-hopt-container');
+      const modalGrid = document.getElementById('optModalGrid');
+      modalGrid.innerHTML = '';
+
+      const labels = hiddenGrid.querySelectorAll('.dyn-hopt');
+      labels.forEach((lbl, index) => {
+          const cb = lbl.querySelector('input');
+          let text = lbl.innerText.trim();
+          const isDisabled = cb.disabled;
+          const isChecked = cb.checked;
+
+          const div = document.createElement('div');
+          div.style.display = 'flex';
+          div.style.alignItems = 'center';
+          div.style.padding = '14px 16px';
+          div.style.marginBottom = '10px';
+          div.style.borderRadius = '10px';
+          div.style.border = isDisabled ? '1px solid #eee' : (isChecked ? '2px solid #cc0000' : '1px solid #ddd');
+          div.style.background = isChecked ? '#fff0f5' : '#fff';
+          div.style.opacity = isDisabled ? '0.5' : '1';
+          div.style.cursor = isDisabled ? 'not-allowed' : 'pointer';
+          div.style.transition = 'all 0.2s';
+          
+          div.onmouseenter = () => { if(!cb.disabled && !cb.checked) div.style.backgroundColor = '#fafbfc'; };
+          div.onmouseleave = () => { if(!cb.disabled && !cb.checked) div.style.backgroundColor = '#fff'; };
+
+          div.innerHTML = `
+              <input type="checkbox" style="transform: scale(1.4); margin-right: 16px; accent-color: #cc0000; cursor:inherit;" ${isChecked ? 'checked' : ''} ${isDisabled ? 'disabled' : ''}>
+              <span style="font-weight: bold; font-size: 14px; color: ${isChecked ? '#cc0000' : '#333'}; line-height: 1.4;">${text}</span>
+          `;
+
+          div.onclick = (e) => {
+              if (cb.disabled) return;
+              if (e.target.tagName !== 'INPUT') {
+                  const input = div.querySelector('input');
+                  input.checked = !input.checked;
+              }
+              cb.checked = div.querySelector('input').checked;
+              calculate();
+          };
+          
+          modalGrid.appendChild(div);
+      });
+      
+      document.getElementById('optModal').style.display = 'flex';
+  }
+
+  function closeOptModal() {
+      document.getElementById('optModal').style.display = 'none';
+      editingOptLineId = null;
+  }
+
+  function updateOptModalUI() {
+      if(!editingOptLineId) return;
+      const block = document.getElementById(editingOptLineId);
+      if(!block) return;
+      const hiddenLabels = block.querySelectorAll('.hidden-hopt-container .dyn-hopt');
+      const modalDivs = document.getElementById('optModalGrid').children;
+      
+      hiddenLabels.forEach((lbl, i) => {
+          const cb = lbl.querySelector('input');
+          const div = modalDivs[i];
+          if(!div) return;
+          
+          const isDisabled = cb.disabled;
+          const isChecked = cb.checked;
+          
+          div.style.opacity = isDisabled ? '0.5' : '1';
+          div.style.cursor = isDisabled ? 'not-allowed' : 'pointer';
+          
+          const input = div.querySelector('input');
+          input.disabled = isDisabled;
+          input.checked = isChecked;
+          
+          div.style.border = isDisabled ? '1px solid #eee' : (isChecked ? '2px solid #cc0000' : '1px solid #ddd');
+          div.style.background = isChecked ? '#fff0f5' : '#fff';
+          div.querySelector('span').style.color = isChecked ? '#cc0000' : '#333';
+      });
+  }
+
+  function openKojiModal(lineId) {
+      editingKojiLineId = lineId;
+      const block = document.getElementById(lineId);
+      const hiddenGrid = block.querySelector('.hidden-hkoji-container');
+      const modalGrid = document.getElementById('kojiModalGrid');
+      modalGrid.innerHTML = '';
+
+      const labels = hiddenGrid.querySelectorAll('.dyn-hkoji');
+      labels.forEach((lbl, index) => {
+          const cb = lbl.querySelector('input');
+          let text = lbl.innerText.trim();
+          let price = Number(lbl.getAttribute("data-total")) || 0;
+          let priceText = price > 0 ? ` (+${price.toLocaleString()}円)` : '';
+
+          const isDisabled = cb.disabled;
+          const isChecked = cb.checked;
+
+          const div = document.createElement('div');
+          div.style.display = 'flex';
+          div.style.alignItems = 'center';
+          div.style.padding = '14px 16px';
+          div.style.marginBottom = '10px';
+          div.style.borderRadius = '10px';
+          div.style.border = isDisabled ? '1px solid #eee' : (isChecked ? '2px solid #cc0000' : '1px solid #ddd');
+          div.style.background = isChecked ? '#fff0f5' : '#fff';
+          div.style.opacity = isDisabled ? '0.5' : '1';
+          div.style.cursor = isDisabled ? 'not-allowed' : 'pointer';
+          div.style.transition = 'all 0.2s';
+          
+          div.onmouseenter = () => { if(!cb.disabled && !cb.checked) div.style.backgroundColor = '#fafbfc'; };
+          div.onmouseleave = () => { if(!cb.disabled && !cb.checked) div.style.backgroundColor = '#fff'; };
+
+          div.innerHTML = `
+              <input type="checkbox" style="transform: scale(1.4); margin-right: 16px; accent-color: #cc0000; cursor:inherit;" ${isChecked ? 'checked' : ''} ${isDisabled ? 'disabled' : ''}>
+              <div style="display:flex; flex-direction:column;">
+                <span style="font-weight: bold; font-size: 14px; color: ${isChecked ? '#cc0000' : '#333'}; line-height: 1.4;">${text}</span>
+                <span style="font-size: 12px; color: ${isChecked ? '#cc0000' : '#666'}; line-height: 1.4;">${priceText}</span>
+              </div>
+          `;
+
+          div.onclick = (e) => {
+              if (cb.disabled) return;
+              if (e.target.tagName !== 'INPUT') {
+                  const input = div.querySelector('input');
+                  input.checked = !input.checked;
+              }
+              cb.checked = div.querySelector('input').checked;
+              calculate();
+          };
+          
+          modalGrid.appendChild(div);
+      });
+      
+      document.getElementById('kojiModal').style.display = 'flex';
+  }
+
+  function closeKojiModal() {
+      document.getElementById('kojiModal').style.display = 'none';
+      editingKojiLineId = null;
+  }
+
+  function updateKojiModalUI() {
+      if(!editingKojiLineId) return;
+      const block = document.getElementById(editingKojiLineId);
+      if(!block) return;
+      const hiddenLabels = block.querySelectorAll('.hidden-hkoji-container .dyn-hkoji');
+      const modalDivs = document.getElementById('kojiModalGrid').children;
+      
+      hiddenLabels.forEach((lbl, i) => {
+          const cb = lbl.querySelector('input');
+          const div = modalDivs[i];
+          if(!div) return;
+          
+          const isDisabled = cb.disabled;
+          const isChecked = cb.checked;
+          
+          div.style.opacity = isDisabled ? '0.5' : '1';
+          div.style.cursor = isDisabled ? 'not-allowed' : 'pointer';
+          
+          const input = div.querySelector('input');
+          input.disabled = isDisabled;
+          input.checked = isChecked;
+          
+          div.style.border = isDisabled ? '1px solid #eee' : (isChecked ? '2px solid #cc0000' : '1px solid #ddd');
+          div.style.background = isChecked ? '#fff0f5' : '#fff';
+          
+          const spans = div.querySelectorAll('span');
+          spans[0].style.color = isChecked ? '#cc0000' : '#333';
+          if(spans[1]) spans[1].style.color = isChecked ? '#cc0000' : '#666';
+      });
   }
 
   function safeAddLine(type) { try { addLine(type); } catch(e) { console.error("Line Add Error:", e); } }
@@ -659,7 +855,52 @@
     document.getElementById(viewId + '-view').classList.add('view-active');
     document.querySelectorAll('.top-nav .btn').forEach(btn => btn.classList.remove('btn-primary'));
     document.getElementById('btn-' + viewId).classList.add('btn-primary');
-    if(viewId === 'graph') calculate();
+    if(viewId === 'graph') {
+        renderGraphToggles();
+        updateGraph();
+    }
+  }
+
+  function renderGraphToggles() {
+    const gContainer = document.getElementById('graph-line-selectors');
+    if (!gContainer) return;
+    
+    gContainer.innerHTML = '';
+    const lines = document.querySelectorAll('.line-container');
+    if (lines.length === 0) return;
+
+    let allSelected = Array.from(lines).every(l => graphSelectedLines.has(l.id));
+
+    const allBtn = document.createElement('div');
+    allBtn.className = `graph-toggle-btn ${allSelected ? 'active' : ''}`;
+    allBtn.innerText = allSelected ? '☑ 全回線' : '☐ 全回線';
+    allBtn.onclick = () => {
+      if (allSelected) {
+        graphSelectedLines.clear();
+      } else {
+        lines.forEach(l => graphSelectedLines.add(l.id));
+      }
+      renderGraphToggles();
+      updateGraph();
+    };
+    gContainer.appendChild(allBtn);
+
+    lines.forEach((line, index) => {
+      const isFixed = line.getAttribute("data-type") === "fixed";
+      const title = isFixed ? `🌐 ${index + 1}回線目` : `📱 ${index + 1}回線目`;
+      const isChecked = graphSelectedLines.has(line.id);
+      
+      const btn = document.createElement('div');
+      btn.className = `graph-toggle-btn ${isChecked ? 'active' : ''}`;
+      btn.innerText = (isChecked ? '☑ ' : '☐ ') + title;
+      btn.onclick = () => {
+        if(graphSelectedLines.has(line.id)) graphSelectedLines.delete(line.id);
+        else graphSelectedLines.add(line.id);
+        renderGraphToggles();
+        updateGraph();
+      };
+      gContainer.appendChild(btn);
+    });
   }
 
   function renderTabs() {
@@ -671,18 +912,33 @@
       tabBarContainer.style.display = 'none';
       document.getElementById('emptyState').style.display = 'block';
     } else {
-      tabBarContainer.style.display = 'flex';
+      tabBarContainer.style.display = 'block';
       document.getElementById('emptyState').style.display = 'none';
       tabBar.innerHTML = '';
       lines.forEach((line, index) => {
         const isFixed = line.getAttribute("data-type") === "fixed";
         const btn = document.createElement('button');
         btn.className = `tab-btn ${line.id === activeLineId ? 'active' : ''} ${isFixed ? 'fixed-tab' : ''}`;
-        btn.innerText = isFixed ? `🌐 ${index + 1}回線目(光/5G)` : `📱 ${index + 1}回線目(スマホ)`;
+        
+        const titleSpan = document.createElement('span');
+        titleSpan.innerText = isFixed ? `🌐 ${index + 1}回線目(光/5G)` : `📱 ${index + 1}回線目(スマホ)`;
+        
+        const closeBtn = document.createElement('span');
+        closeBtn.innerHTML = '✕';
+        closeBtn.className = 'tab-close-btn';
+        closeBtn.title = "この回線を削除";
+        closeBtn.onclick = (e) => {
+          e.stopPropagation(); 
+          removeLine(line.id);
+        };
+        
         btn.onclick = () => switchTab(line.id);
+        btn.appendChild(titleSpan);
+        btn.appendChild(closeBtn);
         tabBar.appendChild(btn);
       });
     }
+    renderGraphToggles();
   }
 
   function switchTab(lineId) {
@@ -717,7 +973,7 @@
                   <span class="form-label">選択機種</span>
                   <div style="display:flex; justify-content:space-between; align-items:center; border:2px solid #cc0000; border-radius:8px; padding:8px 12px; background:#fff;">
                     <span class="displayDeviceName" style="font-weight:900; font-size:14px; color:#333;">💳 SIMのみ (機器なし)</span>
-                    <button class="btn btn-primary" onclick="openDeviceModal('${lineId}')" style="padding:6px 12px;">変更</button>
+                    <button class="btn btn-primary" onclick="openDeviceModal('${lineId}', 'mobile')" style="padding:6px 12px;">変更</button>
                     <input type="hidden" class="hiddenDeviceVal" value="none">
                   </div>
                 </div>
@@ -751,16 +1007,10 @@
                   <div class="form-group" style="flex:1;"><span class="form-label">通話オプション</span><select class="callOptSelect" onchange="calculate()">${mCallHtml}</select></div>
                   <div class="form-group" style="flex:1;"><span class="form-label">補償サービス</span><select class="hoshouSelect" onchange="calculate()">${mHoshouHtml}</select></div>
                 </div>
-                
                 <div class="form-group" style="border-top:1px dashed #eee; padding-top:8px; margin-top:8px;">
                   <span class="form-label">その他オプション</span>
-                  <div style="display:flex; justify-content:space-between; align-items:center; border:1px solid #ddd; border-radius:8px; padding:8px 12px; background:#fff;">
-                    <span class="displayMobileOpt" style="font-size:13px; color:#333; font-weight:bold;">0点選択 (+0円)</span>
-                    <button class="btn btn-primary" onclick="openMultiModal('${lineId}', 'mobileOpt')" style="padding:6px 12px; font-size:12px; background:#444;">変更</button>
-                  </div>
-                  <div class="mobile-opt-container" style="display:none;">${mSpHtml}${mOtherHtml}</div>
+                  <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">${mSpHtml}${mOtherHtml}</div>
                 </div>
-                
                 <div style="margin-top:8px; padding-top:8px; font-size:11px; color:#888; text-align:right; border-top:1px solid #eee;">ﾕﾆﾊﾞｰｻﾙ料等: ${mandatoryFeeTotal}円</div>
               </div>
               <div class="section-footer">プラン・OP 計: <span class="col-total-plan price-text">0</span>円</div>
@@ -774,12 +1024,12 @@
                 <div class="form-group" style="background:#fffaf0; border:1px solid #ffeeba; padding:10px; border-radius:8px; margin-bottom:12px;">
                   <span class="form-label" style="color:#d39e00;">家族割・ネット割 (この回線へ適用)</span>
                   <select class="familySelect" onchange="calculate()" style="margin-bottom:8px;"><option value="0">家族割 なし</option><option value="550">みんなドコモ割 (2回線)</option><option value="1210">みんなドコモ割 (3回線以上)</option></select>
-                  <label class="check-label hikariCheck" style="margin-bottom:0; background:#fff; display:flex;"><input type="checkbox" onchange="calculate()"> 光 / home 5G セット割</label>
+                  <label class="check-label hikariCheck" style="margin-bottom:0; background:#fff;"><input type="checkbox" onchange="calculate()"> 光 / home 5G セット割</label>
                 </div>
                 <div class="form-group">
                   <span class="form-label">その他 定常割引</span>
                   <select class="dcardSelect" onchange="calculate()" style="margin-bottom:8px;"><option value="0">dカード割 無</option><option value="220">一般 (-220円)</option><option value="550">GOLD (-550円)</option></select>
-                  <label class="check-label denkiCheck" style="display:flex;"><input type="checkbox" onchange="calculate()"> でんきセット割</label>
+                  <label class="check-label denkiCheck"><input type="checkbox" onchange="calculate()"> でんきセット割</label>
                 </div>
                 <div class="form-group" style="border-top:1px dashed #eee; padding-top:8px; margin-top:8px;">
                   <span class="form-label">キャンペーン</span>${mCpHtml}
@@ -815,12 +1065,13 @@
                 
                 <div class="form-group" style="border-top:1px dashed #eee; padding-top:8px; margin-top:8px;">
                   <span class="form-label">オプション</span>
-                  <div style="display:flex; justify-content:space-between; align-items:center; border:1px solid #ddd; border-radius:8px; padding:8px 12px; background:#fff;">
-                    <span class="displayFixedOpt" style="font-size:13px; color:#333; font-weight:bold;">0点選択 (+0円)</span>
-                    <button class="btn btn-primary" onclick="openMultiModal('${lineId}', 'fixedOpt')" style="padding:6px 12px; font-size:12px; background:#444;">変更</button>
+                  <div style="display:none;" class="hidden-hopt-container">${hOptHtml}</div>
+                  <div style="display:flex; justify-content:space-between; align-items:center; border:2px solid #cc0000; border-radius:8px; padding:8px 12px; background:#fff;">
+                    <span class="displayHOptText" style="font-weight:900; font-size:14px; color:#333;">選択なし</span>
+                    <button class="btn btn-primary" onclick="openFixedOptModal('${lineId}')" style="padding:6px 12px;">変更</button>
                   </div>
-                  <div class="fixed-opt-container" style="display:none;">${hOptHtml}</div>
                 </div>
+
               </div>
               <div class="section-footer">ネット・OP 計: <span class="col-total-plan price-text">0</span>円</div>
             </div>
@@ -829,25 +1080,33 @@
               <div class="section-header">🌐 工事・ルーター</div>
               <div class="section-body">
                 <div style="display:flex; gap:12px;">
-                  <div class="form-group" style="flex:2;"><span class="form-label">ルーター機器</span><select class="hDevSelect" onchange="calculate()">${hDevHtml}</select></div>
+                  <div class="form-group" style="flex:2;">
+                    <span class="form-label">ルーター機器</span>
+                    <div style="display:flex; justify-content:space-between; align-items:center; border:2px solid #cc0000; border-radius:8px; padding:8px 12px; background:#fff;">
+                      <span class="displayHDevName" style="font-weight:900; font-size:14px; color:#333;">機器なし / その他</span>
+                      <button class="btn btn-primary" onclick="openDeviceModal('${lineId}', 'fixed')" style="padding:6px 12px;">変更</button>
+                      <input type="hidden" class="hDevSelect" value="none">
+                    </div>
+                  </div>
                   <div class="form-group" style="flex:1;"><span class="form-label">お支払い方法</span><select class="hPaySelect" onchange="calculate()"><option value="1">一括払い</option><option value="12">12回分割</option><option value="24">24回分割</option><option value="36" selected>36回分割</option><option value="48">48回分割</option></select></div>
                 </div>
                 <div class="form-group" style="border-top:1px dashed #eee; padding-top:8px; margin-top:8px;">
                   
                   <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
                     <span class="form-label" style="margin-bottom:0;">工事費・その他費用</span>
-                    <select class="hKojiPaySelect" onchange="calculate()" style="width:140px; padding:6px; font-size:12px; border-color:#cc0000; color:#cc0000; font-weight:bold;">
-                      <option value="24" selected>工事費: 24回</option>
-                      <option value="12">工事費: 12回</option>
-                      <option value="1">工事費: 一括</option>
+                    <select class="hKojiPaySelect" onchange="calculate()" style="width:160px; padding:6px; font-size:12px; border-color:#cc0000; color:#cc0000; font-weight:bold;">
+                      <option value="24" selected>工事費: 24回分割</option>
+                      <option value="12">工事費: 12回分割</option>
+                      <option value="1">工事費: 一括払い</option>
                     </select>
                   </div>
                   
-                  <div style="display:flex; justify-content:space-between; align-items:center; border:1px solid #ddd; border-radius:8px; padding:8px 12px; background:#fff;">
-                    <span class="displayFixedKoji" style="font-size:13px; color:#333; font-weight:bold;">0点選択 (総額 0円)</span>
-                    <button class="btn btn-primary" onclick="openMultiModal('${lineId}', 'fixedKoji')" style="padding:6px 12px; font-size:12px; background:#444;">変更</button>
+                  <div style="display:none;" class="hidden-hkoji-container">${hKojiHtml}</div>
+                  
+                  <div style="display:flex; justify-content:space-between; align-items:center; border:2px solid #cc0000; border-radius:8px; padding:8px 12px; background:#fff;">
+                    <span class="displayHKojiText" style="font-weight:900; font-size:14px; color:#333;">選択なし</span>
+                    <button class="btn btn-primary" onclick="openKojiModal('${lineId}')" style="padding:6px 12px;">変更</button>
                   </div>
-                  <div id="hKojiContainer_${lineId}" class="fixed-koji-container" style="display:none;">${hKojiHtml}</div>
                   
                   <div style="text-align:right; font-size:11px; color:#cc0000; font-weight:bold; margin-top:6px;">
                     ※工事費総額: <span class="koji-total-display">0</span>円
@@ -887,6 +1146,9 @@
 
     document.getElementById('linesContainer').appendChild(div);
     activeLineId = lineId;
+    
+    graphSelectedLines.add(lineId);
+
     if(type==='fixed') updateHProv(lineId);
     renderTabs(); calculate();
   }
@@ -925,6 +1187,11 @@
         if(hVal && dest.querySelector('.hiddenDeviceVal')) dest.querySelector('.hiddenDeviceVal').value = hVal.value;
         if(dName && dest.querySelector('.displayDeviceName')) dest.querySelector('.displayDeviceName').innerText = dName.innerText;
     } else {
+        let hDevVal = src.querySelector('.hDevSelect');
+        let hDevName = src.querySelector('.displayHDevName');
+        if(hDevVal && dest.querySelector('.hDevSelect')) dest.querySelector('.hDevSelect').value = hDevVal.value;
+        if(hDevName && dest.querySelector('.displayHDevName')) dest.querySelector('.displayHDevName').innerText = hDevName.innerText;
+
         updateHProv(activeLineId);
     }
     calculate();
@@ -933,6 +1200,10 @@
   function removeLine(id) {
     let el = document.getElementById(id);
     if(el) el.remove();
+    
+    graphSelectedLines.delete(id);
+    delete lineGraphData[id];
+
     const remain = document.querySelectorAll('.line-container');
     if (remain.length > 0) {
       activeLineId = remain[0].id;
@@ -945,6 +1216,10 @@
     if(!confirm("全てクリアして空にしますか？")) return;
     document.getElementById("linesContainer").innerHTML = "";
     lineCounter = 0; activeLineId = null;
+    
+    graphSelectedLines.clear();
+    lineGraphData = {};
+    
     renderTabs(); calculate();
   }
 
@@ -954,28 +1229,57 @@
     if(myChart) myChart.destroy();
     myChart = new Chart(ctx.getContext('2d'), {
       type: 'bar',
-      data: { labels: Array.from({length:48}, (_,i)=>`${i+1}ヵ月目`), datasets: [{label:'工事/機器(合算)', data:dData, backgroundColor:'#ff4d6d', stack:'0'}, {label:'通信/OP料(合算)', data:pData, backgroundColor:'#118ab2', stack:'0'}] },
+      data: { labels: Array.from({length:48}, (_,i)=>`${i+1}ヵ月目`), datasets: [{label:'工事/機器(選択分)', data:dData, backgroundColor:'#ff4d6d', stack:'0'}, {label:'通信/OP料(選択分)', data:pData, backgroundColor:'#118ab2', stack:'0'}] },
       options: { responsive:true, maintainAspectRatio:false, scales:{x:{stacked:true}, y:{stacked:true, beginAtZero:true}}, plugins:{legend:{position:'top'}} }
     });
   }
 
+  function updateGraph() {
+    let arrP = new Array(48).fill(0);
+    let arrD = new Array(48).fill(0);
+    let aFee = 0;
+    let selectedCount = 0;
+
+    graphSelectedLines.forEach(id => {
+      if(lineGraphData[id]) {
+        selectedCount++;
+        for(let i=0; i<48; i++) {
+          arrP[i] += lineGraphData[id].p[i];
+          arrD[i] += lineGraphData[id].d[i];
+        }
+        aFee += lineGraphData[id].aFee;
+      }
+    });
+
+    if(myChart){ 
+      myChart.data.datasets[0].data = arrD; 
+      myChart.data.datasets[1].data = arrP; 
+      myChart.update(); 
+    }
+    
+    generateTimeline(arrP, arrD, aFee, selectedCount);
+  }
+
   function calculate() {
     let grandM2 = 0; let singleActiveM2 = 0;
-    let arrP = new Array(48).fill(0); let arrD = new Array(48).fill(0); let adminTot = 0;
     const blocks = document.querySelectorAll('.line-container');
+    let bHtml = '';
 
     if (blocks.length === 0) {
       if(document.getElementById("bottomLineTotals")) document.getElementById("bottomLineTotals").innerHTML = "";
       if(document.getElementById("grandTotalDisplay")) document.getElementById("grandTotalDisplay").innerText = "0";
-      if(myChart && myChart.data){ myChart.data.datasets[0].data=arrD; myChart.data.datasets[1].data=arrP; myChart.update(); }
-      generateTimeline(arrP, arrD, 0); return;
+      updateGraph();
+      return;
     }
-
-    let bHtml = '';
 
     blocks.forEach((block, index) => {
       const type = block.getAttribute("data-type");
-      let lM2 = 0; let lineAdminFee = 4950; adminTot += lineAdminFee;
+      let lM2 = 0; 
+      
+      let lineArrP = new Array(48).fill(0);
+      let lineArrD = new Array(48).fill(0);
+
+      let lineAdminFee = type === 'mobile' ? mobileAdminFee : fixedAdminFee;
 
       if (type === 'mobile') {
         const ct = block.querySelector('.contractTypeSelect')?.value || "kisyu";
@@ -1042,10 +1346,10 @@
           }
         }
         
-        block.querySelectorAll('.mobile-opt-container .dyn-other-opt').forEach(l=>{ let cb=l.querySelector('input'); if(isKidsP){ cb.disabled=true; cb.checked=false; l.style.opacity="0.4"; }else{ cb.disabled=false; l.style.opacity="1"; } });
+        block.querySelectorAll('.dyn-other-opt').forEach(l=>{ let cb=l.querySelector('input'); if(isKidsP){ cb.disabled=true; cb.checked=false; l.style.opacity="0.4"; }else{ cb.disabled=false; l.style.opacity="1"; } });
 
         let oChk = false;
-        block.querySelectorAll('.mobile-opt-container .special-opt').forEach(lbl => {
+        block.querySelectorAll('.special-opt').forEach(lbl => {
             if(lbl.innerText.includes('大盛り')) {
                 let cb = lbl.querySelector('input');
                 if(!isAhamo || isKidsP) { cb.disabled = true; cb.checked = false; lbl.style.opacity = "0.4"; }
@@ -1053,7 +1357,7 @@
             }
         });
 
-        block.querySelectorAll('.mobile-opt-container .special-opt').forEach(lbl => {
+        block.querySelectorAll('.special-opt').forEach(lbl => {
             if(lbl.innerText.includes('ポイ活')) {
                 let cb = lbl.querySelector('input');
                 if(!isAhamo || !oChk || isKidsP) { cb.disabled = true; cb.checked = false; lbl.style.opacity = "0.4"; }
@@ -1081,22 +1385,47 @@
           else if(hSel.value==="applecare_theft"&&dDev[devId]) pTot+=dDev[devId].applecare_theft_price;
           else pTot+=Number(hSel.options[hSel.selectedIndex].getAttribute("data-price"));
         }
-        
-        let mOptsChecked = block.querySelectorAll('.mobile-opt-container input:checked');
-        let mOptDisp = block.querySelector('.displayMobileOpt');
-        let mOptSum = 0;
-        if(mOptsChecked.length > 0) {
-            mOptsChecked.forEach(cb => {
-                let p = Number(cb.closest('.check-label').getAttribute("data-price"));
-                mOptSum += p;
-                pTot += p;
-            });
-            if(mOptDisp) mOptDisp.innerText = `${mOptsChecked.length}点選択 (+${mOptSum.toLocaleString()}円)`;
-        } else {
-            if(mOptDisp) mOptDisp.innerText = `0点選択 (+0円)`;
+
+        let maxOptPrices = [];
+        let isMaxPlan = pObj.name && (pObj.name.toUpperCase().includes("MAX") || pObj.name.includes("ＭＡＸ"));
+
+        block.querySelectorAll('.dyn-other-opt input:checked, .special-opt input:checked').forEach(cb => {
+            let lbl = cb.closest('.check-label');
+            let price = Number(lbl.getAttribute("data-price"));
+            pTot += price;
+            
+            if (isMaxPlan && lbl.classList.contains("max-free-opt")) {
+                maxOptPrices.push(price);
+            }
+        });
+
+        let freeAmount = 0;
+        if (maxOptPrices.length > 0) {
+            maxOptPrices.sort((a, b) => b - a);
+            if (maxOptPrices.length > 0) freeAmount += maxOptPrices[0];
+            if (maxOptPrices.length > 1) freeAmount += maxOptPrices[1];
+            pTot -= freeAmount;
         }
 
-        if(block.querySelector('.col-total-plan')) block.querySelector('.col-total-plan').innerText = pTot.toLocaleString();
+        let planOpFooterSpan = block.querySelector('.col-total-plan');
+        if (planOpFooterSpan) {
+            planOpFooterSpan.innerText = pTot.toLocaleString();
+            let footerDiv = planOpFooterSpan.parentElement;
+            let noteNode = footerDiv.querySelector('.max-discount-note');
+            
+            if (freeAmount > 0) {
+                if (!noteNode) {
+                    let note = document.createElement('div');
+                    note.className = 'max-discount-note';
+                    note.style = "font-size:11px; color:#cc0000; margin-top:4px;";
+                    footerDiv.appendChild(note);
+                    noteNode = note;
+                }
+                noteNode.innerText = `※MAXプラン特典: -${freeAmount.toLocaleString()}円`;
+            } else {
+                if (noteNode) noteNode.remove();
+            }
+        }
 
         const famV = parseInt(block.querySelector('.familySelect')?.value || 0);
         const hikV = block.querySelector('.hikariCheck input')?.checked ? 1210 : 0;
@@ -1146,12 +1475,16 @@
           });
           
           let pFinal = Math.max(0, (pTot - mandatoryFeeTotal) - md) + mandatoryFeeTotal; 
-          if(m===1) arrP[m-1]+=(pFinal+lineAdminFee); else arrP[m-1]+=pFinal;
+          if(m===1) lineArrP[m-1] = pFinal + lineAdminFee; else lineArrP[m-1] = pFinal;
 
           let dv=0; if(m===1)dv=d1; else if(m<=23)dv=d2; else if(m===24)dv=d24;
-          arrD[m-1]+=dv;
+          lineArrD[m-1] = dv;
+
           if(m===2){ lM2 = pFinal+dv; grandM2 += lM2; }
         }
+        
+        lineGraphData[block.id] = { p: lineArrP, d: lineArrD, aFee: lineAdminFee };
+
         if(block.querySelector('.line-final-total')) block.querySelector('.line-final-total').innerText = lM2.toLocaleString();
         if (block.id === activeLineId) singleActiveM2 = lM2;
         let bClass = (block.id===activeLineId) ? 'active-badge' : '';
@@ -1193,21 +1526,19 @@
         const isHome5G = isHome5GDev || isHomePlanSelected;
         const is10G = planText.includes("10ギガ") || planText.includes("10G");
         const isKodate = planText.includes("戸建") || planText.includes("戸建て") || planText.includes("ファミリー");
-        
         const isTvAvailable = !isHome5G && (isKodate || is10G);
 
         let isPhoneValue = false;
         let hasPhoneOpt = false;
         let hasTvOpt = false;
 
-        block.querySelectorAll('.fixed-opt-container .dyn-hopt').forEach(lbl => {
+        block.querySelectorAll('.dyn-hopt').forEach(lbl => {
             if (lbl.innerText.includes("ドコモ光電話バリュー") && lbl.querySelector('input').checked) {
                 isPhoneValue = true;
             }
         });
 
-        // 光オプションの制御
-        block.querySelectorAll('.fixed-opt-container .dyn-hopt').forEach(lbl => {
+        block.querySelectorAll('.dyn-hopt').forEach(lbl => {
             let cb = lbl.querySelector('input');
             let txt = lbl.innerText;
             
@@ -1248,14 +1579,32 @@
             }
         });
 
+        let optCheckedCount = 0;
+        let optTotal = 0;
+        block.querySelectorAll('.dyn-hopt input:checked').forEach(cb => {
+            optCheckedCount++;
+            optTotal += Number(cb.closest('.check-label').getAttribute("data-price"));
+        });
+        const optSummary = block.querySelector('.displayHOptText');
+        if (optSummary) {
+            if (optCheckedCount === 0) {
+                optSummary.innerText = "選択なし";
+                optSummary.style.color = "#888";
+            } else {
+                optSummary.innerHTML = `<span style="color:#cc0000;">${optCheckedCount}件選択中 (+${optTotal.toLocaleString()}円)</span>`;
+            }
+        }
+        if (editingOptLineId === block.id) {
+            updateOptModalUI();
+        }
+
         const kojiPaySel = block.querySelector('.hKojiPaySelect');
         if (kojiPaySel) {
             kojiPaySel.disabled = isHome5G;
             kojiPaySel.style.opacity = isHome5G ? "0.4" : "1";
         }
 
-        // 光工事費の制御
-        block.querySelectorAll('.fixed-koji-container .dyn-hkoji').forEach(lbl => {
+        block.querySelectorAll('.dyn-hkoji').forEach(lbl => {
             let cb = lbl.querySelector('input');
             let txt = lbl.innerText;
             let isPhoneKoji = txt.includes("電話");
@@ -1278,6 +1627,10 @@
                 lbl.style.opacity = "1";
             }
         });
+
+        if (editingKojiLineId === block.id) {
+            updateKojiModalUI();
+        }
 
         block.querySelectorAll('.hcamp-opt').forEach(lbl => {
             let cb = lbl.querySelector('input');
@@ -1302,22 +1655,7 @@
         const pObj = hPlan[pId] || {price:0, raw:{}};
         
         let pTot = pObj.price;
-        
-        // 光オプションテキスト更新
-        let fOptsChecked = block.querySelectorAll('.fixed-opt-container input:checked');
-        let fOptDisp = block.querySelector('.displayFixedOpt');
-        let fOptSum = 0;
-        if(fOptsChecked.length > 0) {
-            fOptsChecked.forEach(cb => {
-                let p = Number(cb.closest('.check-label').getAttribute("data-price"));
-                fOptSum += p;
-                pTot += p;
-            });
-            if(fOptDisp) fOptDisp.innerText = `${fOptsChecked.length}点選択 (+${fOptSum.toLocaleString()}円)`;
-        } else {
-            if(fOptDisp) fOptDisp.innerText = `0点選択 (+0円)`;
-        }
-
+        block.querySelectorAll('.dyn-hopt input:checked').forEach(cb => pTot+=Number(cb.closest('.check-label').getAttribute("data-price")));
         if(block.querySelector('.col-total-plan')) block.querySelector('.col-total-plan').innerText = pTot.toLocaleString();
 
         let devM2 = 0, supM2 = 0;
@@ -1342,10 +1680,10 @@
         let kFeeM2 = 0;
         let monthKojiArr = new Array(48).fill(0);
         let kojiTotalSum = 0; 
+        let kojiCheckedCount = 0;
 
-        // 光工事費テキスト更新
-        let fKojisChecked = block.querySelectorAll('.fixed-koji-container input:checked');
-        fKojisChecked.forEach(cb => {
+        block.querySelectorAll('.dyn-hkoji input:checked').forEach(cb => {
+            kojiCheckedCount++;
             const lbl = cb.closest('.check-label');
             let total = Number(lbl.getAttribute("data-total")) || 0;
             kojiTotalSum += total; 
@@ -1372,14 +1710,18 @@
             }
         });
 
-        let fKojiDisp = block.querySelector('.displayFixedKoji');
-        if (fKojiDisp) {
-            if(fKojisChecked.length > 0) fKojiDisp.innerText = `${fKojisChecked.length}点選択 (総額 ${kojiTotalSum.toLocaleString()}円)`;
-            else fKojiDisp.innerText = `0点選択 (総額 0円)`;
-        }
-
         if(block.querySelector('.koji-total-display')) {
             block.querySelector('.koji-total-display').innerText = kojiTotalSum.toLocaleString();
+        }
+        
+        const kojiSummary = block.querySelector('.displayHKojiText');
+        if (kojiSummary) {
+            if (kojiCheckedCount === 0) {
+                kojiSummary.innerText = "選択なし";
+                kojiSummary.style.color = "#888";
+            } else {
+                kojiSummary.innerHTML = `<span style="color:#cc0000;">${kojiCheckedCount}件選択中</span>`;
+            }
         }
 
         if(block.querySelector('.col-total-device')) block.querySelector('.col-total-device').innerText = (devM2 + kFeeM2).toLocaleString();
@@ -1395,8 +1737,6 @@
            }
         });
         if(block.querySelector('.col-total-discount')) block.querySelector('.col-total-discount').innerText = (dM2 + supM2).toLocaleString();
-
-        let aFee = 3300; adminTot += aFee; 
 
         for(let m=1; m<=48; m++){
            let md = 0;
@@ -1421,35 +1761,38 @@
            dv += monthKojiArr[m-1];
 
            let pFinal = Math.max(0, pTot - md - sup);
-           if(m===1) arrP[m-1]+=(pFinal+aFee); else arrP[m-1]+=pFinal;
-           arrD[m-1]+=dv;
+           if(m===1) lineArrP[m-1] = pFinal + lineAdminFee; else lineArrP[m-1] = pFinal;
+           lineArrD[m-1] = dv;
 
            if(m===2){ lM2 = pFinal+dv; grandM2 += lM2; }
         }
+        
+        lineGraphData[block.id] = { p: lineArrP, d: lineArrD, aFee: lineAdminFee };
+
         if(block.querySelector('.line-final-total')) block.querySelector('.line-final-total').innerText = lM2.toLocaleString();
         if (block.id === activeLineId) singleActiveM2 = lM2;
         let bClass = (block.id===activeLineId) ? 'fixed-badge active-badge' : 'fixed-badge';
-        let bHtmlLine = `<div class="line-badge ${bClass}" onclick="switchTab('${block.id}')">🌐 ${index+1}回線目<span>${lM2.toLocaleString()}円</span></div>`;
-        if(document.getElementById("bottomLineTotals")) document.getElementById("bottomLineTotals").innerHTML += bHtmlLine;
+        bHtml += `<div class="line-badge ${bClass}" onclick="switchTab('${block.id}')">🌐 ${index+1}回線目<span>${lM2.toLocaleString()}円</span></div>`;
       }
     });
 
+    if(document.getElementById("bottomLineTotals")) document.getElementById("bottomLineTotals").innerHTML = bHtml;
+    
     let displayPrice = currentDisplayMode === 'all' ? grandM2 : singleActiveM2;
     if(document.getElementById("grandTotalDisplay")) document.getElementById("grandTotalDisplay").innerText = displayPrice.toLocaleString();
 
-    if(myChart && myChart.data){ myChart.data.datasets[0].data=arrD; myChart.data.datasets[1].data=arrP; myChart.update(); }
-    generateTimeline(arrP, arrD, adminTot);
+    updateGraph();
   }
 
-  function generateTimeline(arrP, arrD, aFee) {
-    let html = `<table class="timeline-table"><tbody><tr><th>1ヵ月目 (合算)</th><td><div style="margin-bottom:4px;">・契約事務手数料等: <span class="price-red">${aFee.toLocaleString()}円</span></div><div style="margin-bottom:4px;">・通信/OP料: <span class="price-red">${(arrP[0]-aFee).toLocaleString()}円</span></div><div>・機器/工事費: <span class="price-red">${arrD[0].toLocaleString()}円</span></div><div style="margin-top:8px; background:#eee; padding:4px 8px; display:inline-block; font-weight:bold;">計: ${(arrP[0]+arrD[0]).toLocaleString()}円</div></td></tr><tr><th>2〜23ヵ月目 (合算)</th><td><div style="margin-bottom:4px;">・通信/OP料: <span class="price-red">${arrP[1].toLocaleString()}円/月</span></div><div>・機器/工事費: <span class="price-red">${arrD[1].toLocaleString()}円/月</span></div><div style="margin-top:8px; background:#e6f2ff; color:#0066cc; padding:4px 8px; display:inline-block; font-weight:bold;">合算目安: ${(arrP[1]+arrD[1]).toLocaleString()}円</div></td></tr><tr><th>24ヵ月目〜 (合算)</th><td><div style="margin-bottom:4px;">・通信/OP料: <span class="price-red">${arrP[23].toLocaleString()}円/月</span></div><div>・機器残価等: <span class="price-red">${arrD[23].toLocaleString()}円</span></div></td></tr></tbody></table>`;
+  function generateTimeline(arrP, arrD, aFee, selectedCount) {
+    let label = selectedCount >= 2 ? `(${selectedCount}回線 合算)` : (selectedCount === 1 ? `(1回線のみ)` : `(選択なし)`);
+    let html = `<table class="timeline-table"><tbody><tr><th>1ヵ月目 <br><span style="font-size:11px; color:#666;">${label}</span></th><td><div style="margin-bottom:4px;">・契約事務手数料等: <span class="price-red">${aFee.toLocaleString()}円</span></div><div style="margin-bottom:4px;">・通信/OP料: <span class="price-red">${(Math.max(0, arrP[0]-aFee)).toLocaleString()}円</span></div><div>・機器/工事費: <span class="price-red">${arrD[0].toLocaleString()}円</span></div><div style="margin-top:8px; background:#eee; padding:4px 8px; display:inline-block; font-weight:bold;">計: ${(arrP[0]+arrD[0]).toLocaleString()}円</div></td></tr><tr><th>2〜23ヵ月目 <br><span style="font-size:11px; color:#666;">${label}</span></th><td><div style="margin-bottom:4px;">・通信/OP料: <span class="price-red">${arrP[1].toLocaleString()}円/月</span></div><div>・機器/工事費: <span class="price-red">${arrD[1].toLocaleString()}円/月</span></div><div style="margin-top:8px; background:#e6f2ff; color:#0066cc; padding:4px 8px; display:inline-block; font-weight:bold;">合算目安: ${(arrP[1]+arrD[1]).toLocaleString()}円</div></td></tr><tr><th>24ヵ月目〜 <br><span style="font-size:11px; color:#666;">${label}</span></th><td><div style="margin-bottom:4px;">・通信/OP料: <span class="price-red">${arrP[23].toLocaleString()}円/月</span></div><div>・機器残価等: <span class="price-red">${arrD[23].toLocaleString()}円</span></div></td></tr></tbody></table>`;
     if(document.getElementById('timelineContainer')) document.getElementById('timelineContainer').innerHTML = html;
   }
 
   window.onload = () => {
     document.getElementById('addMobileBtn').disabled = true;
     document.getElementById('addFixedBtn').disabled = true;
-    if(document.getElementById("bottomLineTotals")) document.getElementById("bottomLineTotals").innerHTML = "";
     init();
   };
 </script>
