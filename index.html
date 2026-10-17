@@ -22,7 +22,6 @@
   .tab-close-btn { display: inline-flex; justify-content: center; align-items: center; width: 20px; height: 20px; border-radius: 50%; margin-left: 8px; font-size: 11px; color: #888; background: rgba(0,0,0,0.06); transition: all 0.2s; }
   .tab-close-btn:hover { background: rgba(204,0,0,0.15); color: #cc0000; }
   
-  /* 3カラム横並びレイアウト */
   .view-container { display: none; padding: 16px; max-width: 1400px; margin: 0 auto; }
   .view-active { display: block; }
   .two-columns { display: flex; gap: 16px; align-items: stretch; }
@@ -44,7 +43,12 @@
   .form-label { display: block; font-size: 11px; color: #555; margin-bottom: 4px; font-weight: bold; }
   select, input[type="number"] { width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 13px; box-sizing: border-box; background: #fdfdfd; transition: border 0.2s; }
   select:focus, input[type="number"]:focus { border-color: #cc0000; outline: none; }
-  .check-label { display: none; }
+  
+  /* キャンペーンは消えないように、ポップアップに入れる中身だけを隠す */
+  .mobile-opt-container .check-label, .fixed-opt-container .check-label, .fixed-koji-container .check-label { display: none; }
+  .check-label { display: flex; align-items: center; gap: 6px; font-size: 12px; margin-bottom: 6px; cursor: pointer; padding: 6px 10px; border-radius: 8px; border: 1px solid #eee; transition: all 0.2s; }
+  .check-label:hover { background: #f9f9f9; }
+  .check-label input { transform: scale(1.2); accent-color: #cc0000; margin:0; }
 
   .graph-toggle-btn { padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: bold; cursor: pointer; border: 2px solid #ddd; background: #fff; color: #555; transition: all 0.2s; display: inline-flex; align-items: center; gap: 4px; }
   .graph-toggle-btn:hover { background: #f8f9fa; border-color: #ccc; }
@@ -60,7 +64,6 @@
   .mode-btn { padding: 4px 10px; font-size: 11px; font-weight: bold; border: none; background: transparent; border-radius: 6px; cursor: pointer; color: #666; transition: all 0.2s; }
   .mode-btn.active { background: #cc0000; color: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
 
-  /* ポップアップ用 カードUI */
   .multi-card { background: #fff; border: 2px solid #eee; border-radius: 8px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: all 0.2s ease; }
   .multi-card.active { border-color: #cc0000; background: #fff0f5; }
   .multi-card.disabled { opacity: 0.4; cursor: not-allowed; background: #f9f9f9; border-color:#eee; }
@@ -68,7 +71,6 @@
   .checkbox-mock.checked { background: #cc0000; border-color: #cc0000; }
   .checkbox-mock.checked::after { content: '✔'; color: #fff; font-size: 14px; font-weight:bold; }
 
-  /* モーダル共通 */
   .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 2000; display: none; justify-content: center; align-items: center; backdrop-filter: blur(4px); }
   .modal-content { background: #fff; width: 95%; max-width: 1000px; height: 85vh; border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
   .modal-header { padding: 16px 24px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; background: #fafbfc; }
@@ -95,31 +97,22 @@
 
   @media (max-width: 900px) { .two-columns { flex-direction: column; } .col-left { flex-direction: column; width: 100%; } .col-right { width: 100%; } }
 
-  /* ✨ 印刷（PDF出力）用の美しいレイアウト設定 ✨ */
+  /* 印刷用の美しいレイアウト設定 */
   @media print {
     @page { size: landscape; margin: 10mm; }
     body { background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    
-    /* 印刷時に消す要素たち（ナビ、ボトムバー、印刷/変更/削除ボタンなど） */
     .top-nav, .bottom-bar, .no-print, .btn-delete-line, .tab-close-btn { display: none !important; }
-    
     .view-container { padding: 0 !important; }
     .view-container:not(.view-active) { display: none !important; }
     .view-container.view-active { display: block !important; }
-    
     .sticky-summary { position: static !important; border: 2px solid #cc0000 !important; }
     .section-body { overflow: visible !important; height: auto !important; }
-    
-    /* 選択中のタブ（〇回線目）だけタイトルとして綺麗に残す */
+    .btn { display: none !important; }
     .tab-bar-container { padding: 0 0 16px 0 !important; margin: 0 !important; }
     .tab-btn:not(.active) { display: none !important; }
     .tab-btn.active { display: inline-block !important; border: 2px solid #cc0000 !important; background: #fff0f5 !important; font-size: 16px !important; padding: 12px 24px !important; }
-    
-    /* セレクトボックスや入力欄の枠線を消してスッキリ見せる */
     select, input[type="number"] { appearance: none; -webkit-appearance: none; border: none !important; background: transparent !important; padding: 0 !important; font-weight: bold; color: #333; }
     input[type="number"] { text-align: right; }
-    
-    /* カードのデザインを見積書っぽく調整 */
     .section-card { break-inside: avoid; border: 1px solid #ccc !important; box-shadow: none !important; }
     .form-group > div[style*="border"] { border: none !important; padding: 0 !important; background: transparent !important; }
   }
@@ -146,13 +139,10 @@
       <h2>上のボタンから回線を追加してください</h2>
       <p>スマホのみ、光のみ、または両方の合算シミュレーションが可能です。</p>
     </div>
-    
-    <!-- ✨ 入力画面用：タブエリア ＋ 印刷ボタン ✨ -->
     <div class="tab-bar-container" id="tabBarContainer" style="display:none;">
       <div class="tab-bar" id="tabBar"></div>
       <button class="btn no-print" style="border:2px solid #cc0000; color:#cc0000; font-weight:bold; background:#fff; padding:6px 16px; font-size:14px;" onclick="window.print()">🖨️ この画面を印刷</button>
     </div>
-    
     <div id="linesContainer" style="margin-top:16px;"></div>
   </div>
 
@@ -190,7 +180,6 @@
   </div>
 </div>
 
-<!-- 機種/機器 選択用モーダル -->
 <div id="deviceModal" class="modal-overlay no-print">
   <div class="modal-content">
     <div class="modal-header">
@@ -204,7 +193,6 @@
   </div>
 </div>
 
-<!-- オプション・工事費 複数選択用ポップアップモーダル -->
 <div id="multiModal" class="modal-overlay no-print">
   <div class="modal-content" style="max-width: 600px; height: 75vh;">
     <div class="modal-header">
@@ -223,7 +211,7 @@
 <script>
   window.forceFetchData = function() {
       if(confirm("スプレッドシートの最新データを読み込みますか？")) {
-          localStorage.removeItem("docomo_sim_cache_v16");
+          localStorage.removeItem("docomo_sim_cache_v17");
           location.reload();
       }
   };
@@ -285,7 +273,7 @@
 
   async function init() {
     try {
-      const CACHE_KEY_NEW = "docomo_sim_cache_v16";
+      const CACHE_KEY_NEW = "docomo_sim_cache_v17";
       let dataObj = null;
       try {
           let cached = localStorage.getItem(CACHE_KEY_NEW);
@@ -603,6 +591,8 @@
     lineCounter++; const lineId = "line_" + lineCounter;
     document.querySelectorAll('.line-container').forEach(l => l.style.display = 'none');
     const div = document.createElement('div'); div.className = 'line-container'; div.id = lineId; div.setAttribute("data-type", type); div.style.display = 'block';
+    
+    // ■ キャンペーン部分は明示的に display:flex; を記述して常に表示させる ■
     if (type === 'mobile') {
       div.innerHTML = `<div class="two-columns"><div class="col-left"><div class="section-card"><div class="section-header">📱 機種・ご契約種別</div><div class="section-body"><div class="form-group"><span class="form-label">ご契約種別</span><select class="contractTypeSelect" onchange="calculate()"><option value="kisyu">機種変更</option><option value="shinki">新規契約</option><option value="mnp">のりかえ(MNP)</option></select></div><div class="form-group"><span class="form-label">選択機種</span><div style="display:flex; justify-content:space-between; align-items:center; border:2px solid #cc0000; border-radius:8px; padding:8px 12px; background:#fff;"><span class="displayDeviceName" style="font-weight:900; font-size:14px; color:#333;">💳 SIMのみ (機器なし)</span><button class="btn btn-primary no-print" onclick="openDeviceModal('${lineId}', 'mobile')" style="padding:6px 12px;">変更</button><input type="hidden" class="hiddenDeviceVal" value="none"></div></div><div class="form-group"><span class="form-label">お支払い方法</span><select class="payMethodSelect" onchange="calculate()"><option value="kaedoki">いつでもカエドキプログラム (24回)</option><option value="ikkatsu">一括払い</option></select></div><div class="form-group" style="background:#f9f9f9; padding:10px; border-radius:8px; border:1px solid #eee;"><span class="form-label" style="color:#cc0000;">店舗独自値引・頭金</span><div style="display:flex; align-items:center; gap:8px;"><span style="color:#cc0000; font-weight:bold;">-</span><input type="number" class="manualDeviceDiscount" value="0" min="0" onchange="calculate()" style="text-align:right;"><span>円</span></div><div style="font-size:11px; color:#888; margin-top:4px;">※元の分割金: <span class="devicePriceHint">0円/月</span></div></div></div><div class="section-footer">機種代金目安: <span class="col-total-device price-text">0</span>円/月</div></div><div class="section-card"><div class="section-header">📄 料金プラン・オプション</div><div class="section-body"><div class="form-group"><span class="form-label">料金プラン</span><select class="planSelect" onchange="calculate()">${mPlanHtml}</select></div><div style="display:flex; gap:12px;"><div class="form-group" style="flex:1;"><span class="form-label">通話オプション</span><select class="callOptSelect" onchange="calculate()">${mCallHtml}</select></div><div class="form-group" style="flex:1;"><span class="form-label">補償サービス</span><select class="hoshouSelect" onchange="calculate()">${mHoshouHtml}</select></div></div><div class="form-group" style="border-top:1px dashed #eee; padding-top:8px; margin-top:8px;"><span class="form-label">その他オプション</span><div style="display:flex; justify-content:space-between; align-items:center; border:1px solid #ddd; border-radius:8px; padding:8px 12px; background:#fff;"><span class="displayMobileOpt" style="font-size:13px; color:#333; font-weight:bold;">0点選択 (+0円)</span><button class="btn btn-primary no-print" onclick="openMultiModal('${lineId}', 'mobileOpt')" style="padding:6px 12px; font-size:12px; background:#444;">変更</button></div><div class="mobile-opt-container" style="display:none;">${mSpHtml}${mOtherHtml}</div></div><div style="margin-top:8px; padding-top:8px; font-size:11px; color:#888; text-align:right; border-top:1px solid #eee;">ﾕﾆﾊﾞｰｻﾙ料等: <span class="mandatory-fee-display">${mandatoryFeeTotal}</span>円</div></div><div class="section-footer">プラン・OP 計: <span class="col-total-plan price-text">0</span>円</div></div></div><div class="col-right"><div class="section-card"><div class="section-header">🎁 割引・キャンペーン</div><div class="section-body"><div class="form-group" style="background:#fffaf0; border:1px solid #ffeeba; padding:10px; border-radius:8px; margin-bottom:12px;"><span class="form-label" style="color:#d39e00;">家族割・ネット割 (この回線へ適用)</span><select class="familySelect" onchange="calculate()" style="margin-bottom:8px;"><option value="0">家族割 なし</option><option value="550">みんなドコモ割 (2回線)</option><option value="1210">みんなドコモ割 (3回線以上)</option></select><label class="check-label hikariCheck" style="margin-bottom:0; background:#fff; display:flex;"><input type="checkbox" onchange="calculate()"> 光 / home 5G セット割</label></div><div class="form-group"><span class="form-label">その他 定常割引</span><select class="dcardSelect" onchange="calculate()" style="margin-bottom:8px;"><option value="0">dカード割 無</option><option value="220">一般 (-220円)</option><option value="550">GOLD (-550円)</option></select><label class="check-label denkiCheck" style="display:flex;"><input type="checkbox" onchange="calculate()"> でんきセット割</label></div><div class="form-group" style="border-top:1px dashed #eee; padding-top:8px; margin-top:8px;"><span class="form-label">キャンペーン</span>${mCpHtml}</div></div><div class="section-footer">割引 計: <span style="color:#cc0000;">-<span class="col-total-discount price-text">0</span>円</span></div></div><div class="section-card sticky-summary"><div class="section-header" style="background:#cc0000; color:#fff; border-bottom:none;">💰 この回線の月額目安</div><div class="section-body" style="text-align:center; padding: 16px;"><div style="font-size: 13px; color: #888; font-weight:bold;">2ヵ月目以降 (割引適用後)</div><div style="font-size: 38px; font-weight: 900; color: #cc0000; margin-top:8px; letter-spacing:-1px;"><span class="line-final-total">0</span><span style="font-size: 18px; font-weight:bold;"> 円/月</span></div><button class="btn-delete-line no-print" onclick="removeLine('${lineId}')">🗑️ この回線を削除</button></div></div></div></div>`;
     } else {
@@ -678,7 +668,9 @@
 
   function calculate() {
     let grandM2 = 0; let singleActiveM2 = 0;
-    const blocks = document.querySelectorAll('.line-container'); let bHtml = '';
+    const blocks = document.querySelectorAll('.line-container'); 
+    let bHtml = ''; // ★ここでバッジのHTMLを初期化
+
     if (blocks.length === 0) {
       if(document.getElementById("bottomLineTotals")) document.getElementById("bottomLineTotals").innerHTML = "";
       if(document.getElementById("grandTotalDisplay")) document.getElementById("grandTotalDisplay").innerText = "0";
@@ -848,7 +840,9 @@
           if(cb&&cb.checked){ 
               let v=Number(pObj.raw[d.id+'_val'])||0; 
               if(v===0 && d.price) v = d.price;
-              if(v===0 && d.name.includes("U15") && pObj.name && pObj.name.includes("デビュー")) { v = pObj.name.includes("20GB") ? 1870 : 1100; }
+              if(v===0 && d.name.includes("U15") && pObj.name && pObj.name.includes("デビュー")) {
+                  v = pObj.name.includes("20GB") ? 1870 : 1100; 
+              }
               dM2+=v; 
           }
         });
@@ -863,13 +857,16 @@
               if(cb&&cb.checked){ 
                   let v=Number(pObj.raw[d.id+'_val'])||0; 
                   if(v===0 && d.price) v = d.price;
-                  if(v===0 && d.name.includes("U15") && pObj.name && pObj.name.includes("デビュー")) { v = pObj.name.includes("20GB") ? 1870 : 1100; }
+                  if(v===0 && d.name.includes("U15") && pObj.name && pObj.name.includes("デビュー")) {
+                      v = pObj.name.includes("20GB") ? 1870 : 1100; 
+                  }
                   if(d.duration===0||m<=d.duration) md+=v; 
               } 
           });
           
           let pFinal = Math.max(0, (pTot - mandatoryFeeTotal) - md) + mandatoryFeeTotal; 
           if(m===1) lineArrP[m-1] = pFinal + lineAdminFee; else lineArrP[m-1] = pFinal;
+
           let dv=0; if(m===1)dv=d1; else if(m<=23)dv=d2; else if(m===24)dv=d24;
           lineArrD[m-1] = dv;
           if(m===2){ lM2 = pFinal+dv; grandM2 += lM2; }
@@ -880,6 +877,7 @@
         if(block.querySelector('.line-final-total')) block.querySelector('.line-final-total').innerText = lM2.toLocaleString();
         if (block.id === activeLineId) singleActiveM2 = lM2;
         let bClass = (block.id===activeLineId) ? 'active-badge' : '';
+        // ★ バッジのHTMLを追加
         bHtml += `<div class="line-badge ${bClass}" onclick="switchTab('${block.id}')">📱 ${index+1}回線目<span>${lM2.toLocaleString()}円</span></div>`;
       
       } else if (type === 'fixed') {
@@ -894,30 +892,51 @@
             if (opt.value === "none") return;
             let isHomePlan = opt.value.includes("home") || opt.text.includes("home") || opt.text.includes("5G");
             let hide = false;
-            if (isHome5GDev) { if(!isHomePlan) hide=true; } else { if(isHomePlan && devSel.value!=="none") hide=true; }
-            if (hide) { opt.style.display = "none"; opt.disabled = true; if (planSel.value === opt.value) planSel.value = "none"; } 
-            else { opt.style.display = ""; opt.disabled = false; }
+            if (isHome5GDev) { if(!isHomePlan) hide=true; } 
+            else { if(isHomePlan && devSel.value!=="none") hide=true; }
+
+            if (hide) {
+              opt.style.display = "none"; opt.disabled = true;
+              if (planSel.value === opt.value) planSel.value = "none";
+            } else {
+              opt.style.display = ""; opt.disabled = false;
+            }
           });
-          if (isHome5GDev && planSel.value==="none") { let hOpt = Array.from(planSel.options).find(o=>o.value.includes("home") || o.text.includes("home")); if(hOpt) planSel.value = hOpt.value; }
-          if(planSel.selectedIndex >= 0) { planText = planSel.options[planSel.selectedIndex].text; }
+          
+          if (isHome5GDev && planSel.value==="none") {
+              let hOpt = Array.from(planSel.options).find(o=>o.value.includes("home") || o.text.includes("home"));
+              if(hOpt) planSel.value = hOpt.value;
+          }
+          if(planSel.selectedIndex >= 0) {
+              planText = planSel.options[planSel.selectedIndex].text;
+          }
         }
 
         const isHomePlanSelected = planText.includes("home") || planText.includes("5G");
         const isHome5G = isHome5GDev || isHomePlanSelected;
         const is10G = planText.includes("10ギガ") || planText.includes("10G");
         const isKodate = planText.includes("戸建") || planText.includes("戸建て") || planText.includes("ファミリー");
+        
         const isTvAvailable = !isHome5G && (isKodate || is10G);
 
-        let isPhoneValue = false; let hasPhoneOpt = false; let hasTvOpt = false;
+        let isPhoneValue = false;
+        let hasPhoneOpt = false;
+        let hasTvOpt = false;
 
         block.querySelectorAll('.fixed-opt-container .dyn-hopt').forEach(lbl => {
-            if (lbl.innerText.includes("ドコモ光電話バリュー") && lbl.querySelector('input').checked) { isPhoneValue = true; }
+            if (lbl.innerText.includes("ドコモ光電話バリュー") && lbl.querySelector('input').checked) {
+                isPhoneValue = true;
+            }
         });
 
+        // 光オプションの制御
         block.querySelectorAll('.fixed-opt-container .dyn-hopt').forEach(lbl => {
-            let cb = lbl.querySelector('input'); let txt = lbl.innerText;
+            let cb = lbl.querySelector('input');
+            let txt = lbl.innerText;
+            
             let isHikariOnly = txt.includes("光") || txt.includes("テレビ") || txt.includes("TV") || txt.includes("ひかり") || txt.includes("着信") || txt.includes("転送") || txt.includes("番号") || txt.includes("リクエスト") || txt.includes("ストップ") || txt.includes("チャンネル");
             let isTvService = txt.includes("テレビ") || txt.includes("TV");
+
             let isBundleDuplicate = false;
             if (isPhoneValue) {
                 if (txt.includes("ドコモ光電話") && !txt.includes("バリュー")) isBundleDuplicate = true;
@@ -929,44 +948,98 @@
                 if (txt.includes("着信お知らせメール")) isBundleDuplicate = true;
             }
 
-            if (isTvService && !isTvAvailable) { cb.checked = false; cb.disabled = true; lbl.style.opacity = "0.4"; } 
-            else if (isHome5G && isHikariOnly) { cb.checked = false; cb.disabled = true; lbl.style.opacity = "0.4"; } 
-            else if (isBundleDuplicate) { cb.checked = false; cb.disabled = true; lbl.style.opacity = "0.4"; } 
-            else { cb.disabled = false; lbl.style.opacity = "1"; }
+            if (isTvService && !isTvAvailable) {
+                cb.checked = false;
+                cb.disabled = true;
+                lbl.style.opacity = "0.4";
+            } else if (isHome5G && isHikariOnly) {
+                cb.checked = false;
+                cb.disabled = true;
+                lbl.style.opacity = "0.4";
+            } else if (isBundleDuplicate) {
+                cb.checked = false;
+                cb.disabled = true;
+                lbl.style.opacity = "0.4";
+            } else {
+                cb.disabled = false;
+                lbl.style.opacity = "1";
+            }
 
-            if (cb.checked) { if (txt.includes("光電話") || txt.includes("光電話バリュー")) hasPhoneOpt = true; if (isTvService) hasTvOpt = true; }
+            if (cb.checked) {
+                if (txt.includes("光電話") || txt.includes("光電話バリュー")) hasPhoneOpt = true;
+                if (isTvService) hasTvOpt = true;
+            }
         });
 
         const kojiPaySel = block.querySelector('.hKojiPaySelect');
-        if (kojiPaySel) { kojiPaySel.disabled = isHome5G; kojiPaySel.style.opacity = isHome5G ? "0.4" : "1"; }
+        if (kojiPaySel) {
+            kojiPaySel.disabled = isHome5G;
+            kojiPaySel.style.opacity = isHome5G ? "0.4" : "1";
+        }
 
+        // 光工事費の制御
         block.querySelectorAll('.fixed-koji-container .dyn-hkoji').forEach(lbl => {
-            let cb = lbl.querySelector('input'); let txt = lbl.innerText;
-            let isPhoneKoji = txt.includes("電話"); let isTvKoji = txt.includes("テレビ") || txt.includes("TV");
-            if (isHome5G) { cb.checked = false; cb.disabled = true; lbl.style.opacity = "0.4"; } 
-            else if (isPhoneKoji && !hasPhoneOpt) { cb.checked = false; cb.disabled = true; lbl.style.opacity = "0.4"; } 
-            else if (isTvKoji && !hasTvOpt) { cb.checked = false; cb.disabled = true; lbl.style.opacity = "0.4"; } 
-            else { cb.disabled = false; lbl.style.opacity = "1"; }
+            let cb = lbl.querySelector('input');
+            let txt = lbl.innerText;
+            let isPhoneKoji = txt.includes("電話");
+            let isTvKoji = txt.includes("テレビ") || txt.includes("TV");
+
+            if (isHome5G) {
+                cb.checked = false;
+                cb.disabled = true;
+                lbl.style.opacity = "0.4";
+            } else if (isPhoneKoji && !hasPhoneOpt) {
+                cb.checked = false;
+                cb.disabled = true;
+                lbl.style.opacity = "0.4";
+            } else if (isTvKoji && !hasTvOpt) {
+                cb.checked = false;
+                cb.disabled = true;
+                lbl.style.opacity = "0.4";
+            } else {
+                cb.disabled = false;
+                lbl.style.opacity = "1";
+            }
         });
 
         block.querySelectorAll('.hcamp-opt').forEach(lbl => {
-            let cb = lbl.querySelector('input'); let txt = lbl.innerText;
+            let cb = lbl.querySelector('input');
+            let txt = lbl.innerText;
             let is10GCampaign = txt.includes("10ギガ") || txt.includes("10G");
-            if (is10GCampaign) { if (!is10G) { cb.checked = false; cb.disabled = true; lbl.style.opacity = "0.4"; } else { cb.disabled = false; lbl.style.opacity = "1"; } }
+            
+            if (is10GCampaign) {
+                if (!is10G) {
+                    cb.checked = false;
+                    cb.disabled = true;
+                    lbl.style.opacity = "0.4";
+                } else {
+                    cb.disabled = false;
+                    lbl.style.opacity = "1";
+                }
+            }
         });
 
-        const devId = devSel ? devSel.value : "none"; const payM = block.querySelector('.hPaySelect')?.value || "36";
-        const pId = planSel ? planSel.value : "none"; const pObj = hPlan[pId] || {price:0, raw:{}};
+        const devId = devSel ? devSel.value : "none";
+        const payM = block.querySelector('.hPaySelect')?.value || "36";
+        const pId = planSel ? planSel.value : "none";
+        const pObj = hPlan[pId] || {price:0, raw:{}};
         
         let pTot = pObj.price;
         
+        // 光オプションテキスト更新
         let fOptsChecked = block.querySelectorAll('.fixed-opt-container input:checked');
         let fOptDisp = block.querySelector('.displayFixedOpt');
         let fOptSum = 0;
         if(fOptsChecked.length > 0) {
-            fOptsChecked.forEach(cb => { let p = Number(cb.closest('.check-label').getAttribute("data-price")); fOptSum += p; pTot += p; });
+            fOptsChecked.forEach(cb => {
+                let p = Number(cb.closest('.check-label').getAttribute("data-price"));
+                fOptSum += p;
+                pTot += p;
+            });
             if(fOptDisp) fOptDisp.innerText = `${fOptsChecked.length}点選択 (+${fOptSum.toLocaleString()}円)`;
-        } else { if(fOptDisp) fOptDisp.innerText = `0点選択 (+0円)`; }
+        } else {
+            if(fOptDisp) fOptDisp.innerText = `0点選択 (+0円)`;
+        }
 
         if(block.querySelector('.col-total-plan')) block.querySelector('.col-total-plan').innerText = pTot.toLocaleString();
 
@@ -979,23 +1052,47 @@
 
         const supNotice = block.querySelector('.monthly-support-notice');
         if (supNotice) {
-            if (supM2 > 0) { supNotice.style.display = "block"; let msVal = supNotice.querySelector('.ms-val'); if(msVal) msVal.innerText = supM2.toLocaleString(); } 
-            else { supNotice.style.display = "none"; }
+            if (supM2 > 0) {
+                supNotice.style.display = "block";
+                let msVal = supNotice.querySelector('.ms-val');
+                if(msVal) msVal.innerText = supM2.toLocaleString();
+            } else {
+                supNotice.style.display = "none";
+            }
         }
 
         const kojiPayMode = block.querySelector('.hKojiPaySelect')?.value || "24";
-        let kFeeM2 = 0; let monthKojiArr = new Array(48).fill(0); let kojiTotalSum = 0; 
+        let kFeeM2 = 0;
+        let monthKojiArr = new Array(48).fill(0);
+        let kojiTotalSum = 0; 
 
+        // 光工事費テキスト更新
         let fKojisChecked = block.querySelectorAll('.fixed-koji-container input:checked');
         fKojisChecked.forEach(cb => {
-            const lbl = cb.closest('.check-label'); let total = Number(lbl.getAttribute("data-total")) || 0;
+            const lbl = cb.closest('.check-label');
+            let total = Number(lbl.getAttribute("data-total")) || 0;
             kojiTotalSum += total; 
+            
             let m1 = 0, m2 = 0, times = 1;
-            if (kojiPayMode === '1') { times = 1; m1 = total; m2 = 0; } 
-            else if (kojiPayMode === '12') { times = 12; m1 = Number(lbl.getAttribute("data-d12m1")) || 0; m2 = Number(lbl.getAttribute("data-d12m2")) || 0; } 
-            else { times = 24; m1 = Number(lbl.getAttribute("data-d24m1")) || 0; m2 = Number(lbl.getAttribute("data-d24m2")) || 0; }
+
+            if (kojiPayMode === '1') {
+                times = 1; m1 = total; m2 = 0;
+            } else if (kojiPayMode === '12') {
+                times = 12; 
+                m1 = Number(lbl.getAttribute("data-d12m1")) || 0; 
+                m2 = Number(lbl.getAttribute("data-d12m2")) || 0;
+            } else {
+                times = 24; 
+                m1 = Number(lbl.getAttribute("data-d24m1")) || 0; 
+                m2 = Number(lbl.getAttribute("data-d24m2")) || 0;
+            }
+
             if (times >= 2) kFeeM2 += m2;
-            for (let i = 0; i < 48; i++) { if (i === 0) monthKojiArr[i] += m1; else if (i < times) monthKojiArr[i] += m2; }
+
+            for (let i = 0; i < 48; i++) {
+                if (i === 0) monthKojiArr[i] += m1;
+                else if (i < times) monthKojiArr[i] += m2;
+            }
         });
 
         let fKojiDisp = block.querySelector('.displayFixedKoji');
@@ -1003,27 +1100,47 @@
             if(fKojisChecked.length > 0) fKojiDisp.innerText = `${fKojisChecked.length}点選択 (総額 ${kojiTotalSum.toLocaleString()}円)`;
             else fKojiDisp.innerText = `0点選択 (総額 0円)`;
         }
-        if(block.querySelector('.koji-total-display')) { block.querySelector('.koji-total-display').innerText = kojiTotalSum.toLocaleString(); }
+
+        if(block.querySelector('.koji-total-display')) {
+            block.querySelector('.koji-total-display').innerText = kojiTotalSum.toLocaleString();
+        }
+
         if(block.querySelector('.col-total-device')) block.querySelector('.col-total-device').innerText = (devM2 + kFeeM2).toLocaleString();
 
         let dM2 = 0;
         hDisc.forEach(d => {
            let cb=block.querySelector(`.hcamp-opt-${d.id} input`);
-           if(cb&&cb.checked) { let v = Number(pObj.raw[d.id+'_val']) || 0; if(v===0 && d.price) v = d.price; if(v===0 && d.name.includes("ワンコイン")) v = Math.max(0, pTot - 500); dM2 += v; }
+           if(cb&&cb.checked) {
+              let v = Number(pObj.raw[d.id+'_val']) || 0;
+              if(v===0 && d.price) v = d.price;
+              if(v===0 && d.name.includes("ワンコイン")) v = Math.max(0, pTot - 500);
+              dM2 += v;
+           }
         });
         if(block.querySelector('.col-total-discount')) block.querySelector('.col-total-discount').innerText = (dM2 + supM2).toLocaleString();
 
         for(let m=1; m<=48; m++){
            let md = 0;
-           hDisc.forEach(d=>{ let cb=block.querySelector(`.hcamp-opt-${d.id} input`); if(cb&&cb.checked){ let v=Number(pObj.raw[d.id+'_val'])||0; if(v===0 && d.price) v = d.price; if(v===0 && d.name.includes("ワンコイン")) v = Math.max(0, pTot - 500); let dur = d.duration || (d.name.includes("ワンコイン") ? 6 : 0); if(dur===0||m<=dur)md+=v; } });
+           hDisc.forEach(d=>{ let cb=block.querySelector(`.hcamp-opt-${d.id} input`); if(cb&&cb.checked){ 
+               let v=Number(pObj.raw[d.id+'_val'])||0; 
+               if(v===0 && d.price) v = d.price;
+               if(v===0 && d.name.includes("ワンコイン")) v = Math.max(0, pTot - 500);
+               let dur = d.duration || (d.name.includes("ワンコイン") ? 6 : 0);
+               if(dur===0||m<=dur)md+=v; 
+           } });
 
            let dv = 0, sup = 0;
            if (dObj) {
-              if(payM==='1' && m===1) dv = dObj.price_total; else if(payM==='12' && m<=12) dv = (m===1)?dObj.d12_1:dObj.d12_2; else if(payM==='24' && m<=24) dv = (m===1)?dObj.d24_1:dObj.d24_2; else if(payM==='36' && m===1) dv = dObj.d36_1; else if(payM==='36' && m<=36) dv = dObj.d36_2; else if(payM==='48' && m===1) dv = dObj.d48_1; else if(payM==='48' && m<=48) dv = dObj.d48_2;
+              if(payM==='1' && m===1) dv = dObj.price_total;
+              else if(payM==='12' && m<=12) dv = (m===1)?dObj.d12_1:dObj.d12_2;
+              else if(payM==='24' && m<=24) dv = (m===1)?dObj.d24_1:dObj.d24_2;
+              else if(payM==='36' && m===1) dv = dObj.d36_1; else if(payM==='36' && m<=36) dv = dObj.d36_2;
+              else if(payM==='48' && m===1) dv = dObj.d48_1; else if(payM==='48' && m<=48) dv = dObj.d48_2;
               if(m===1) sup=dObj.sup_1; else if(m<=dObj.sup_t) sup=dObj.sup_2;
            }
            
            dv += monthKojiArr[m-1];
+
            let pFinal = Math.max(0, pTot - md - sup);
            if(m===1) lineArrP[m-1] = pFinal + lineAdminFee; else lineArrP[m-1] = pFinal;
            lineArrD[m-1] = dv;
@@ -1036,11 +1153,14 @@
         if(block.querySelector('.line-final-total')) block.querySelector('.line-final-total').innerText = lM2.toLocaleString();
         if (block.id === activeLineId) singleActiveM2 = lM2;
         let bClass = (block.id===activeLineId) ? 'fixed-badge active-badge' : 'fixed-badge';
-        let bHtmlLine = `<div class="line-badge ${bClass}" onclick="switchTab('${block.id}')">🌐 ${index+1}回線目<span>${lM2.toLocaleString()}円</span></div>`;
-        if(document.getElementById("bottomLineTotals")) document.getElementById("bottomLineTotals").innerHTML += bHtmlLine;
+        // ★ バッジのHTMLを追加
+        bHtml += `<div class="line-badge ${bClass}" onclick="switchTab('${block.id}')">🌐 ${index+1}回線目<span>${lM2.toLocaleString()}円</span></div>`;
       }
     });
 
+    // ★ ループを抜けてから一括でバッジを表示
+    if(document.getElementById("bottomLineTotals")) document.getElementById("bottomLineTotals").innerHTML = bHtml;
+    
     let displayPrice = currentDisplayMode === 'all' ? grandM2 : singleActiveM2;
     if(document.getElementById("grandTotalDisplay")) document.getElementById("grandTotalDisplay").innerText = displayPrice.toLocaleString();
 
